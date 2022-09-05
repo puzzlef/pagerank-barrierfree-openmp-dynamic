@@ -168,6 +168,8 @@ auto dynamicVerticesByMark(const G& y, FA fa) {
   vector<K> a; size_t n = 0;
   for (auto u : y.vertexKeys())
     if (vis[u]) { a.push_back(u); ++n; }
+  for (auto u : y.vertexKeys())
+    if (!vis[u]) a.push_back(u);
   return make_pair(a, n);
 }
 
@@ -333,6 +335,8 @@ auto dynamicComponentIndicesByMark(const G& y, const vector2d<K>& cs, FA fa) {
   vector<K> a; size_t n = 0;
   for (K i=0; i<cs.size(); ++i)
     if (vis[i]) { a.push_back(i); ++n; }
+  for (K i=0; i<cs.size(); ++i)
+    if (!vis[i]) a.push_back(i);
   return make_pair(a, n);
 }
 

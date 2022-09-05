@@ -56,19 +56,19 @@ void runPagerankBatch(const string& data, size_t batch, size_t skip, int repeat)
 
     do {
       // Find pagerank accelerated with OpenMP (static, unordered, no dead ends).
-      auto a2 = pagerankMonolithicOmp<false, false>(x, xt, initStatic, {repeat, Li, damping, tolerance});
+      auto a2 = pagerankMonolithicOmp<false, false>(y, yt, initStatic, {repeat, Li, damping, tolerance});
       auto e2 = l1Norm(a2.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankOmpUnorderedStatic\n", y.order(), y.size(), a2.time, a2.iterations, e2);
       // Find pagerank accelerated with OpenMP (static, ordered, no dead ends).
-      auto a3 = pagerankMonolithicOmp<true, false>(x, xt, initStatic, {repeat, Li, damping, tolerance});
+      auto a3 = pagerankMonolithicOmp<true, false>(y, yt, initStatic, {repeat, Li, damping, tolerance});
       auto e3 = l1Norm(a3.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankOmpOrderedStatic\n", y.order(), y.size(), a3.time, a3.iterations, e3);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (static, ordered, no dead ends, full error).
-      auto a4 = pagerankBarrierfreeOmp<true, false, true>(x, xt, initStatic, {repeat, Li, damping, tolerance});
+      auto a4 = pagerankBarrierfreeOmp<true, false, true>(y, yt, initStatic, {repeat, Li, damping, tolerance});
       auto e4 = l1Norm(a4.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreeFullOmpStatic\n", y.order(), y.size(), a4.time, a4.iterations, e4);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (static, ordered, no dead ends, partial error).
-      auto a5 = pagerankBarrierfreeOmp<true, false, false>(x, xt, initStatic, {repeat, Li, damping, tolerance});
+      auto a5 = pagerankBarrierfreeOmp<true, false, false>(y, yt, initStatic, {repeat, Li, damping, tolerance});
       auto e5 = l1Norm(a5.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreePartOmpStatic\n", y.order(), y.size(), a5.time, a5.iterations, e5);
     } while (0);
@@ -79,19 +79,19 @@ void runPagerankBatch(const string& data, size_t batch, size_t skip, int repeat)
 
     do {
       // Find pagerank accelerated with OpenMP (naive dynamic, unordered, no dead ends).
-      auto a2 = pagerankMonolithicOmp<false, false>(x, xt, initDynamic, {repeat, Li, damping, tolerance});
+      auto a2 = pagerankMonolithicOmp<false, false>(y, yt, initDynamic, {repeat, Li, damping, tolerance});
       auto e2 = l1Norm(a2.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankOmpUnorderedNaiveDynamic\n", y.order(), y.size(), a2.time, a2.iterations, e2);
       // Find pagerank accelerated with OpenMP (naive dynamic, ordered, no dead ends).
-      auto a3 = pagerankMonolithicOmp<true, false>(x, xt, initDynamic, {repeat, Li, damping, tolerance});
+      auto a3 = pagerankMonolithicOmp<true, false>(y, yt, initDynamic, {repeat, Li, damping, tolerance});
       auto e3 = l1Norm(a3.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankOmpOrderedNaiveDynamic\n", y.order(), y.size(), a3.time, a3.iterations, e3);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (naive dynamic, ordered, no dead ends, full error).
-      auto a4 = pagerankBarrierfreeOmp<true, false, true>(x, xt, initDynamic, {repeat, Li, damping, tolerance});
+      auto a4 = pagerankBarrierfreeOmp<true, false, true>(y, yt, initDynamic, {repeat, Li, damping, tolerance});
       auto e4 = l1Norm(a4.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreeFullOmpNaiveDynamic\n", y.order(), y.size(), a4.time, a4.iterations, e4);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (naive dynamic, ordered, no dead ends, partial error).
-      auto a5 = pagerankBarrierfreeOmp<true, false, false>(x, xt, initDynamic, {repeat, Li, damping, tolerance});
+      auto a5 = pagerankBarrierfreeOmp<true, false, false>(y, yt, initDynamic, {repeat, Li, damping, tolerance});
       auto e5 = l1Norm(a5.ranks, a1.ranks);
       printf("[%zu order; %zu size; %09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreePartOmpNaiveDynamic\n", y.order(), y.size(), a5.time, a5.iterations, e5);
     } while (0);
