@@ -1,6 +1,8 @@
 Effect of using different values of tolerance with barrier-free iterations in
 [OpenMP]-based ordered [PageRank algorithm] for [link analysis].
 
+`TODO`
+
 **Unordered PageRank** is the *standard* approach of PageRank computation (as
 described in the original paper by Larry Page et al. [(1)]), where *two*
 *different rank vectors* are maintained; one representing the *current* ranks of
