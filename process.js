@@ -2,10 +2,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
-const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\} \(transposeWithDegree\)$/m;
+const RGRAPH = /^Using graph .*\/(.+?)\.txt \.\.\./m;
 const RTHRDS = /^OMP_NUM_THREADS=(\d+)/m;
-const RRESLT = /^\[(.+?) ms; (.+?) iters\.\] \[(.+?) err\.\] (\w+)(?:\s+\{tol_norm: (\w+), tolerance: (.+?)\})?/m;
+const REDGES = /^Temporal edges: (\d+)/m;
+const RBATCH = /^# Batch size (.+)/m;
+const RRESLT = /^\[(\d+) order; (\d+) size; (.+?) ms; (.+?) iters\.\] \[(.+?) err\.\] (\w+)/m;
 
 
 
@@ -49,24 +50,27 @@ function readLogLine(ln, data, state) {
     if (!data.has(graph)) data.set(graph, []);
     state = {graph};
   }
-  else if (RORDER.test(ln)) {
-    var [, order, size] = RORDER.exec(ln);
-    state.order = parseFloat(order);
-    state.size  = parseFloat(size);
-  }
   else if (RTHRDS.test(ln)) {
     var [, omp_num_threads] = RTHRDS.exec(ln);
     state.omp_num_threads   = parseFloat(omp_num_threads);
   }
+  else if (REDGES.test(ln)) {
+    var [, temporal_edges] = REDGES.exec(ln);
+    state.temporal_edges   = parseFloat(temporal_edges);
+  }
+  else if (RBATCH.test(ln)) {
+    var [, batch_size] = RBATCH.exec(ln);
+    state.batch_size   = parseFloat(batch_size);
+  }
   else if (RRESLT.test(ln)) {
-    var [, time, iterations, error, technique, tolerance_norm, tolerance] = RRESLT.exec(ln);
+    var [, order, size, time, iterations, error, technique] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
-      time:           parseFloat(time),
-      iterations:     parseFloat(iterations),
-      error:          parseFloat(error),
+      order:      parseFloat(order),
+      size:       parseFloat(size),
+      time:       parseFloat(time),
+      iterations: parseFloat(iterations),
+      error:      parseFloat(error),
       technique,
-      tolerance_norm: tolerance_norm || '',
-      tolerance:      parseFloat(tolerance),
     }));
   }
   return state;
