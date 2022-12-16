@@ -6,6 +6,7 @@
 #include "_iostream.hxx"
 #include "_iterator.hxx"
 #include "_openmp.hxx"
+#include "_pthread.hxx"
 #include "_string.hxx"
 #include "_utility.hxx"
 #include "_random.hxx"

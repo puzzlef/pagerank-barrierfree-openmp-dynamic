@@ -15,3 +15,4 @@
 #include "pagerankBasicSeq.hxx"
 #include "pagerankBasicOmp.hxx"
 #include "pagerankBarrierfreeOmp.hxx"
+#include "pagerankBarrierfreePthread.hxx"
