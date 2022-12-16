@@ -48,15 +48,20 @@ inline void parallelBlockPthread(int numThreads, F fn) {
 // ------------
 
 template <class K, class F>
-inline void parallelForDynamicNoWaitPthread(K begin, K end, F fn) {
-  const  K CHUNK_SIZE = 2048;
-  static atomic<K> xbegin(0), xend(0);
-  K vbegin = 0, vend = 0;
-  if (xbegin==0) xbegin.compare_exchange_weak(vbegin, begin);
-  if (xend  ==0) xend  .compare_exchange_weak(vend,   end);
-  for (K ibegin=xbegin; ibegin>=xend;) {
-    K iend = min(ibegin + CHUNK_SIZE, K(xend));
-    if (!xbegin.compare_exchange_weak(ibegin, iend)) continue;
+inline void parallelForDynamicNoWaitPthread(K begin, K end, K chunkSize, F fn) {
+  static atomic<K>      xbegin(0), xend(0);
+  static atomic<size_t> xround(0);
+  thread_local  size_t  tround(0);
+  if  (++tround<xround) return;
+  for (K obegin=xbegin, oend=xend; obegin>=oend && tround>xround;) {
+    xend    .compare_exchange_strong(oend,   min(begin, obegin));
+    xbegin  .compare_exchange_strong(obegin, begin);
+    if (xend.compare_exchange_strong(oend,   end)) ++xround;
+    break;
+  }
+  for (K ibegin=xbegin; ibegin<xend;) {
+    K iend = min(ibegin + chunkSize, K(xend));
+    if (!xbegin.compare_exchange_strong(ibegin, iend)) continue;
     for (K i=ibegin; i<iend; ++i)
       fn(i);
   }

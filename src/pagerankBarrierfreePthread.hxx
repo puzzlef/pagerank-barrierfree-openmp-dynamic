@@ -39,7 +39,8 @@ using std::min;
  */
 template <class K, class V, class FV>
 inline void pagerankBarrierfreeCalculateRanksPthread(vector<int>& e, vector<V>& a, const vector<V>& r, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, V C0, V E, K i, K n, ThreadInfo *thread, FV fv) {
-  parallelForDynamicNoWaitPthread(i, i+n, [&](K v) {
+  const K CHUNK_SIZE = 2048;
+  parallelForDynamicNoWaitPthread(i, i+n, CHUNK_SIZE, [&](K v) {
     V ev = pagerankCalculateRankDelta(a, r, f, xv, xe, v, C0);
     if (ev<=E && e[v]==0) e[v] = 1;  // LI_NORM
     fv(thread, v);
