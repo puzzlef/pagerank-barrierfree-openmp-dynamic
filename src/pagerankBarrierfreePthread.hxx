@@ -56,7 +56,7 @@ template <bool ASYNC=false, bool DEAD=false, class K, class V, class FV>
 inline int pagerankBarrierfreePthreadLoop(vector<int>& e, vector<V>& a, vector<V>& r, vector<V>& c, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, const vector<K>& vdeg, K N, V P, V E, int L, int EF, K i, K n, vector<ThreadInfo*>& threads, FV fv) {
   if (EF!=LI_NORM) return 0;
   int MAX_THREADS = omp_get_max_threads();
-  parallelBlock(MAX_THREADS, [&](int t) {
+  parallelBlockPthread(MAX_THREADS, [&](int t) {
     int& l = threads[t]->iteration;
     while (l<L) {
       V C0 = (1-P)/N;
