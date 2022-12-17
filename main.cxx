@@ -20,7 +20,7 @@ using namespace std;
 #endif
 // You can define number of threads with -DMAX_THREADS=...
 #ifndef MAX_THREADS
-#define MAX_THREADS 12
+#define MAX_THREADS 24
 #endif
 
 
@@ -31,8 +31,8 @@ void runPagerank(const G& x, const H& xt, int repeat) {
   using V = TYPE;
   vector<V> *init = nullptr;
 
-  for (int sleepDurationMs=1; sleepDurationMs<=1000; sleepDurationMs*=10) {
-    for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.2f) {
+  for (int sleepDurationMs=1; sleepDurationMs<=100; sleepDurationMs*=10) {
+    for (float sleepProbability=0.0f; sleepProbability<0.21f; sleepProbability+=0.05f) {
       chrono::milliseconds sd(sleepDurationMs);
       float sp = sleepProbability / x.order();
       // Do something (sleep) after processing each vertex.
