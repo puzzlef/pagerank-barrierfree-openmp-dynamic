@@ -2,11 +2,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const RGRAPH = /^Using graph .*\/(.+?)\.txt \.\.\./m;
-const RTHRDS = /^OMP_NUM_THREADS=(\d+)/m;
-const REDGES = /^Temporal edges: (\d+)/m;
-const RBATCH = /^# Batch size (.+)/m;
-const RRESLT = /^\[(\d+) order; (\d+) size; (.+?) ms; (.+?) iters\.\] \[(.+?) err\.\] (\w+)/m;
+const ROMPTH = /^OMP_NUM_THREADS=(\d+)/m;
+const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
+const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\}/m;
+const RRESLT = /^\{(.+?) batch, (.+?) aff, (.+?)ms @ (.+?) sleep\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) early\] (\w+)/m;
 
 
 
@@ -45,31 +44,33 @@ function writeCsv(pth, rows) {
 // -----
 
 function readLogLine(ln, data, state) {
+  ln = ln.replace(/^\d+-\d+-\d+ \d+:\d+:\d+\s+/, '');
+  if (ROMPTH.test(ln)) {
+    var [, omp_num_threads] = ROMPTH.exec(ln);
+    state.omp_num_threads   = parseFloat(omp_num_threads);
+  }
   if (RGRAPH.test(ln)) {
     var [, graph] = RGRAPH.exec(ln);
     if (!data.has(graph)) data.set(graph, []);
-    state = {graph};
+    state.graph   = graph;
   }
-  else if (RTHRDS.test(ln)) {
-    var [, omp_num_threads] = RTHRDS.exec(ln);
-    state.omp_num_threads   = parseFloat(omp_num_threads);
-  }
-  else if (REDGES.test(ln)) {
-    var [, temporal_edges] = REDGES.exec(ln);
-    state.temporal_edges   = parseFloat(temporal_edges);
-  }
-  else if (RBATCH.test(ln)) {
-    var [, batch_size] = RBATCH.exec(ln);
-    state.batch_size   = parseFloat(batch_size);
+  else if (RORDER.test(ln)) {
+    var [, order, size] = RORDER.exec(ln);
+    state.order = parseFloat(order);
+    state.size  = parseFloat(size);
   }
   else if (RRESLT.test(ln)) {
-    var [, order, size, time, iterations, error, technique] = RRESLT.exec(ln);
+    var [, batch_size, affected_vertices, sleep_duration, sleep_probability, corrected_time, time, iterations, error, early_exit, technique] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
-      order:      parseFloat(order),
-      size:       parseFloat(size),
-      time:       parseFloat(time),
-      iterations: parseFloat(iterations),
-      error:      parseFloat(error),
+      batch_size:        parseFloat(batch_size),
+      affected_vertices: parseFloat(affected_vertices),
+      sleep_duration:    parseFloat(sleep_duration),
+      sleep_probability: parseFloat(sleep_probability),
+      corrected_time:    parseFloat(corrected_time),
+      time:              parseFloat(time),
+      iterations:        parseFloat(iterations),
+      error:             parseFloat(error),
+      early_exit:        parseFloat(early_exit),
       technique,
     }));
   }
@@ -77,10 +78,10 @@ function readLogLine(ln, data, state) {
 }
 
 function readLog(pth) {
-  var text = readFile(pth);
+  var text  = readFile(pth);
   var lines = text.split('\n');
-  var data = new Map();
-  var state = null;
+  var data  = new Map();
+  var state = {};
   for (var ln of lines)
     state = readLogLine(ln, data, state);
   return data;
