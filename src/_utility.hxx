@@ -29,31 +29,41 @@ struct PairSecondValue { inline V operator()(const pair<K, V>& x) noexcept { ret
 
 
 
-// MEASURE-DURATION
+// MEASURE DURATION
 // ----------------
 
+/** Get current time. */
 inline auto timeNow() {
   return high_resolution_clock::now();
 }
+
+/** Get time duration in milliseconds. */
 template <class T>
-float durationMilliseconds(const T& start, const T& stop) {
+inline float duration(const T& start, const T& stop) {
   auto a = duration_cast<microseconds>(stop - start);
   return a.count()/1000.0f;
 }
 
-
-template <class F>
-float measureDuration(F fn, int N=1) {
-  auto start = high_resolution_clock::now();
-  for (int i=0; i<N; i++)
-    fn();
-  auto stop = high_resolution_clock::now();
-  return durationMilliseconds(start, stop)/N;
+/** Get time duration in milliseconds. */
+template <class T>
+inline float duration(const T& start) {
+  auto stop = timeNow();
+  return duration(start, stop);
 }
 
 
 template <class F>
-float measureDurationMarked(F fn, int N=1) {
+inline float measureDuration(F fn, int N=1) {
+  auto start = timeNow();
+  for (int i=0; i<N; i++)
+    fn();
+  auto stop  = timeNow();
+  return duration(start, stop)/N;
+}
+
+
+template <class F>
+inline float measureDurationMarked(F fn, int N=1) {
   float duration = 0;
   for (int i=0; i<N; i++)
     fn([&](auto fm) { duration += measureDuration(fm); });
@@ -67,7 +77,7 @@ float measureDurationMarked(F fn, int N=1) {
 // -----
 
 template <class F>
-bool retry(F fn, int N=2) {
+inline bool retry(F fn, int N=2) {
   for (int i=0; i<N; i++)
     if (fn()) return true;
   return false;
