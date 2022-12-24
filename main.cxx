@@ -80,8 +80,8 @@ inline size_t batchValue(const G& x, T v) {
   return BATCH_UNIT=="%"? v * x.size() : v;
 }
 
-template <class G, class H, class F>
-inline void runBatches(const G& x, const H& xt, F fn) {
+template <class G, class H, class R, class F>
+inline void runBatches(const G& x, const H& xt, R& rnd, F fn) {
   size_t DELB = batchValue(x, BATCH_DELETIONS_BEGIN);
   size_t DELE = batchValue(x, BATCH_DELETIONS_END);
   size_t INSB = batchValue(x, BATCH_INSERTIONS_BEGIN);
@@ -126,13 +126,14 @@ template <class G, class F>
 inline void runCrashFailures(const G& x, F fn) {
   // Randomly crash (simulated) after processing each vertex.
   for (float p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
-    for (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP)
+    for (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
       float cp = p / x.order();
       auto  fv = [&](ThreadInfo *thread, auto v) {
         uniform_real_distribution<float> dis(0.0f, 1.0f);
         if (thread->id < t && dis(thread->rnd) < cp) thread->crashed = true;
       };
       fn(0, p, t, fv);
+    }
   }
 }
 
@@ -158,7 +159,7 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
-  runBatches(x, xt, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
+  runBatches(x, xt, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
     auto fc = [](bool v) { return v==true; };
     size_t affectedCount = countIf(pagerankAffectedVerticesTraversal(x, deletions, insertions), fc);
     runFailures(y, [&](int failureDuration, float failureProbability, int failureThreads, auto fv) {

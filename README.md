@@ -142,7 +142,7 @@ $ ...
 - [OpenMP Dynamic vs Guided Scheduling](https://stackoverflow.com/a/43047074/1413259)
 - [Assigning default values to shell variables with a single command in bash](https://stackoverflow.com/a/28085062/1413259)
 - [How to define a string literal in gcc command line?](https://stackoverflow.com/a/15220280/1413259)
-- [How to split strings over multiple lines in Bash?](https://stackoverflow.com/a/7316194/1413259)
+- [How to split strings over multiple lines in Bash?](https://stackoverflow.com/a/46806081/1413259)
 - [Macros with values :: Linuxtopia](https://www.linuxtopia.org/online_books/an_introduction_to_gcc/gccintro_35.html)
 
 <br>
