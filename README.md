@@ -1,6 +1,8 @@
 Performance of static vs dynamic barrier-free iterations in [OpenMP]-based
 ordered [PageRank algorithm] for [link analysis].
 
+`TODO`
+
 **Unordered PageRank** is the *standard* approach of PageRank computation (as
 described in the original paper by Larry Page et al. [(1)]), where *two*
 *different rank vectors* are maintained; one representing the *current* ranks of
@@ -138,6 +140,10 @@ $ ...
 - [The University of Florida Sparse Matrix Collection; Timothy A. Davis et al. (2011)](https://doi.org/10.1145/2049662.2049663)
 - [What's the difference between "static" and "dynamic" schedule in OpenMP?](https://stackoverflow.com/a/10852852/1413259)
 - [OpenMP Dynamic vs Guided Scheduling](https://stackoverflow.com/a/43047074/1413259)
+- [Assigning default values to shell variables with a single command in bash](https://stackoverflow.com/a/28085062/1413259)
+- [How to define a string literal in gcc command line?](https://stackoverflow.com/a/15220280/1413259)
+- [How to split strings over multiple lines in Bash?](https://stackoverflow.com/a/7316194/1413259)
+- [Macros with values :: Linuxtopia](https://www.linuxtopia.org/online_books/an_introduction_to_gcc/gccintro_35.html)
 
 <br>
 <br>
