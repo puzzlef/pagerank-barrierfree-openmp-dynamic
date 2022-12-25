@@ -35,7 +35,7 @@ using namespace std;
 // --------------
 
 template <class G, class R>
-inline auto addRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize) {
+inline auto addRandomEdges(G& a, R& rnd, size_t batchSize, size_t i, size_t n) {
   using K = typename G::key_type;
   int retries = 5;
   vector<tuple<K, K>> insertions;
@@ -51,7 +51,7 @@ inline auto addRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize) {
 
 
 template <class G, class R>
-inline auto removeRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize) {
+inline auto removeRandomEdges(G& a, R& rnd, size_t batchSize, size_t i, size_t n) {
   using K = typename G::key_type;
   int retries = 5;
   vector<tuple<K, K>> deletions;
@@ -78,8 +78,8 @@ inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
   while (true) {
     for (int r=0; r<REPEAT_BATCH; ++r) {
       auto y  = duplicate(x);
-      auto deletions  = removeRandomEdges(y, rnd, 1, x.span()-1, d);
-      auto insertions = addRandomEdges   (y, rnd, 1, x.span()-1, i);
+      auto deletions  = removeRandomEdges(y, rnd, d, 1, x.span()-1);
+      auto insertions = addRandomEdges   (y, rnd, i, 1, x.span()-1);
       auto yt = transposeWithDegreeOmp(y);
       fn(y, yt, deletions, insertions);
     }
@@ -99,8 +99,8 @@ inline void runRelativeBatches(const G& x, R& rnd, F fn) {
   while (true) {
     for (int r=0; r<REPEAT_BATCH; ++r) {
       auto y  = duplicate(x);
-      auto deletions  = removeRandomEdges(y, rnd, 1, x.span()-1, size_t(d * x.size()));
-      auto insertions = addRandomEdges   (y, rnd, 1, x.span()-1, size_t(i * x.size()));
+      auto deletions  = removeRandomEdges(y, rnd, size_t(d * x.size()), 1, x.span()-1);
+      auto insertions = addRandomEdges   (y, rnd, size_t(i * x.size()), 1, x.span()-1);
       auto yt = transposeWithDegreeOmp(y);
       fn(y, yt, deletions, insertions);
     }
@@ -123,13 +123,13 @@ inline void runBatches(const G& x, R& rnd, F fn) {
 template <class G, class F>
 inline void runSleepFailures(const G& x, F fn) {
   // Randomly sleep after processing each vertex.
-  for     (int d=FAILURE_DURATION_BEGIN;    d<=FAILURE_DURATION_END;    d FAILURE_DURATION_STEP) {
-    for (float p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
-      for (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
+  for      (int d=FAILURE_DURATION_BEGIN;    d<=FAILURE_DURATION_END;    d FAILURE_DURATION_STEP) {
+    for (double p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
+      for  (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
         chrono::milliseconds sd(d);
-        float sp = p / x.order();
+        double sp = p / x.order();
         auto  fv = [&](ThreadInfo *thread, auto v) {
-          uniform_real_distribution<float> dis(0.0f, 1.0f);
+          uniform_real_distribution<double> dis(0.0, 1.0);
           if (thread->id < t && dis(thread->rnd) < sp) this_thread::sleep_for(sd);
         };
         fn(d, p, t, fv);
@@ -142,11 +142,11 @@ inline void runSleepFailures(const G& x, F fn) {
 template <class G, class F>
 inline void runCrashFailures(const G& x, F fn) {
   // Randomly crash (simulated) after processing each vertex.
-  for (float p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
-    for (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
-      float cp = p / x.order();
+  for (double p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
+    for  (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
+      double cp = p / x.order();
       auto  fv = [&](ThreadInfo *thread, auto v) {
-        uniform_real_distribution<float> dis(0.0f, 1.0f);
+        uniform_real_distribution<double> dis(0.0, 1.0);
         if (thread->id < t && dis(thread->rnd) < cp) thread->crashed = true;
       };
       fn(0, p, t, fv);
@@ -176,10 +176,11 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
+  // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
     auto fc = [](bool v) { return v==true; };
     size_t affectedCount = countIf(pagerankAffectedVerticesTraversal(x, deletions, insertions), fc);
-    runFailures(y, [&](int failureDuration, float failureProbability, int failureThreads, auto fv) {
+    runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
       // Follow a specific result logging format, which can be easily parsed later.
       auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {
         auto ear = pagerankBasicOmp(yt, &ans.ranks, {1}, fnop);
@@ -192,24 +193,25 @@ void runExperiment(const G& x, const H& xt) {
           ans.correctedTime, ans.time, ans.iterations, err, ear.iterations-1, technique
         );
       };
+      auto r1 = pagerankBasicOmp(yt, init, {1}, fnop);
       // Find multi-threaded OpenMP-based Static PageRank (synchronous, no dead ends).
       auto a1 = pagerankBasicOmp(yt, init, {repeat}, fv);
-      flog(a1, a1, "pagerankBasicOmp");
+      flog(a1, r1, "pagerankBasicOmp");
       // Find multi-threaded OpenMP-based Naive-dynamic PageRank (synchronous, no dead ends).
       auto a2 = pagerankBasicOmp(yt, &a0.ranks, {repeat}, fv);
-      flog(a2, a1, "pagerankBasicNaiveDynamicOmp");
+      flog(a2, r1, "pagerankBasicNaiveDynamicOmp");
       // Find multi-threaded OpenMP-based Traversal-based Dynamic PageRank (synchronous, no dead ends).
       auto a3 = pagerankBasicDynamicTraversalOmp(x, xt, y, yt, deletions, insertions, &a0.ranks, {repeat}, fv);
-      flog(a3, a1, "pagerankBasicDynamicTraversalOmp");
+      flog(a3, r1, "pagerankBasicDynamicTraversalOmp");
       // Find multi-threaded OpenMP-based Static Barrier-free PageRank (asynchronous, no dead ends).
       auto b1 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
-      flog(b1, a1, "pagerankBarrierfreeOmp");
+      flog(b1, r1, "pagerankBarrierfreeOmp");
       // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free PageRank (asynchronous, no dead ends).
       auto b2 = pagerankBarrierfreeOmp<true>(yt, &b0.ranks, {repeat}, fv);
-      flog(b2, a1, "pagerankBarrierfreeNaiveDynamicOmp");
+      flog(b2, r1, "pagerankBarrierfreeNaiveDynamicOmp");
       // Find multi-threaded OpenMP-based Traversal-based Dynamic Barrier-free PageRank (asynchronous, no dead ends).
       auto b3 = pagerankBarrierfreeDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
-      flog(b3, a1, "pagerankBarrierfreeDynamicTraversalOmp");
+      flog(b3, r1, "pagerankBarrierfreeDynamicTraversalOmp");
     });
   });
 }

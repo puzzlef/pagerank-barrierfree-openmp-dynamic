@@ -5,9 +5,11 @@ ulimit -s unlimited
 printf "" > "$out"
 
 # Download program
-rm -rf $src
-git clone https://github.com/puzzlef/$src
-cd $src
+if [[ "$DOWNLOAD" != "0" ]]; then
+  rm -rf $src
+  git clone https://github.com/puzzlef/$src
+  cd $src
+fi
 
 # Fixed config
 : "${TYPE:=double}"
@@ -39,7 +41,6 @@ DEFINES=(""
 "-DMAX_THREADS=$MAX_THREADS"
 "-DREPEAT_BATCH=$REPEAT_BATCH"
 "-DREPEAT_METHOD=$REPEAT_METHOD"
-"-DBATCH_TYPE=\"$BATCH_TYPE\""
 "-DBATCH_UNIT=\"$BATCH_UNIT\""
 "-DBATCH_DELETIONS_BEGIN=$BATCH_DELETIONS_BEGIN"
 "-DBATCH_DELETIONS_END=$BATCH_DELETIONS_END"
@@ -61,6 +62,7 @@ DEFINES=(""
 
 # Run
 g++ ${DEFINES[*]} -std=c++17 -O3 -fopenmp main.cxx
+# stdbuf --output=L ./a.out ~/Data/soc-Epinions1.mtx  2>&1 | tee -a "$out"
 stdbuf --output=L ./a.out ~/Data/indochina-2004.mtx  2>&1 | tee -a "$out"
 stdbuf --output=L ./a.out ~/Data/uk-2002.mtx         2>&1 | tee -a "$out"
 stdbuf --output=L ./a.out ~/Data/arabic-2005.mtx     2>&1 | tee -a "$out"

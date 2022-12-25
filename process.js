@@ -5,8 +5,7 @@ const path = require('path');
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/m;
 const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\}/m;
-const RRESLT = /^\{\-(.+?)\/\+(.+?) batch, (.+?) aff, (.+?)\/(.+?) threads (.+?)ms @ (.+?) none failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) early\] (\w+)/m;
-
+const RRESLT = /^\{\-(.+?)\/\+(.+?) batch, (.+?) aff, (.+?)\/(.+?) threads (.+?)ms @ (.+?) (\w+) failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) early\] (\w+)/m;
 
 
 
@@ -49,7 +48,7 @@ function readLogLine(ln, data, state) {
     var [, omp_num_threads] = ROMPTH.exec(ln);
     state.omp_num_threads   = parseFloat(omp_num_threads);
   }
-  if (RGRAPH.test(ln)) {
+  else if (RGRAPH.test(ln)) {
     var [, graph] = RGRAPH.exec(ln);
     if (!data.has(graph)) data.set(graph, []);
     state.graph   = graph;
@@ -62,7 +61,7 @@ function readLogLine(ln, data, state) {
   else if (RRESLT.test(ln)) {
     var [,
       batch_deletions_size, batch_insertions_size, affected_vertices,
-      failure_threads, max_threads, failure_duration, failure_probability,
+      failure_threads, max_threads, failure_duration, failure_probability, failure_type,
       corrected_time, time, iterations, error, early_exit, technique
     ] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
@@ -73,6 +72,7 @@ function readLogLine(ln, data, state) {
       max_threads:           parseFloat(max_threads),
       failure_duration:      parseFloat(failure_duration),
       failure_probability:   parseFloat(failure_probability),
+      failure_type,
       corrected_time:    parseFloat(corrected_time),
       time:              parseFloat(time),
       iterations:        parseFloat(iterations),
