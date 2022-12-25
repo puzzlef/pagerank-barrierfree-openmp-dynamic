@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 src="pagerank-barrierfree-openmp-static-vs-dynamic"
-out="$HOME/Logs/$src.log"
+out="$HOME/Logs/$src$1.log"
 ulimit -s unlimited
 printf "" > "$out"
 
@@ -32,7 +32,7 @@ cd $src
 : "${FAILURE_PROBABILITY_STEP:=*=10}"
 : "${FAILURE_THREADS_BEGIN:=0}"
 : "${FAILURE_THREADS_END:=0}"
-: "${FAILURE_THREADS_STEP:=+=1}"
+: "${FAILURE_THREADS_STEP:=+=4}"
 # Define macros (dont forget to add here)
 DEFINES=(""
 "-DTYPE=$TYPE"
