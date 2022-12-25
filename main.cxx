@@ -41,9 +41,7 @@ inline auto addRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize) {
   vector<tuple<K, K>> insertions;
   auto fe = [&](auto u, auto v, auto w) {
     a.addEdge(u, v);
-    a.addEdge(v, u);
     insertions.push_back(make_tuple(u, v));
-    insertions.push_back(make_tuple(v, u));
   };
   for (size_t l=0; l<batchSize; ++l)
     retry([&]() { return addRandomEdge(a, rnd, i, n, None(), fe); }, retries);
@@ -59,9 +57,7 @@ inline auto removeRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize
   vector<tuple<K, K>> deletions;
   auto fe = [&](auto u, auto v) {
     a.removeEdge(u, v);
-    a.removeEdge(v, u);
     deletions.push_back(make_tuple(u, v));
-    deletions.push_back(make_tuple(v, u));
   };
   for (size_t l=0; l<batchSize; ++l)
     retry([&]() { return removeRandomEdge(a, rnd, i, n, fe); }, retries);
@@ -75,21 +71,11 @@ inline auto removeRandomEdges(G& a, R& rnd, size_t i, size_t n, size_t batchSize
 // PERFORM EXPERIMENT
 // ------------------
 
-template <class G, class T>
-inline size_t batchValue(const G& x, T v) {
-  return BATCH_UNIT=="%"? v * x.size() : v;
-}
-
-template <class G, class H, class R, class F>
-inline void runBatches(const G& x, const H& xt, R& rnd, F fn) {
-  size_t DELB = batchValue(x, BATCH_DELETIONS_BEGIN);
-  size_t DELE = batchValue(x, BATCH_DELETIONS_END);
-  size_t INSB = batchValue(x, BATCH_INSERTIONS_BEGIN);
-  size_t INSE = batchValue(x, BATCH_INSERTIONS_END);
-  size_t d = DELB;
-  size_t i = INSE;
+template <class G, class R, class F>
+inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
+  size_t d = BATCH_DELETIONS_BEGIN;
+  size_t i = BATCH_INSERTIONS_BEGIN;
   while (true) {
-    if (d>DELE && i>INSE) break;
     for (int r=0; r<REPEAT_BATCH; ++r) {
       auto y  = duplicate(x);
       auto deletions  = removeRandomEdges(y, rnd, 1, x.span()-1, d);
@@ -97,9 +83,40 @@ inline void runBatches(const G& x, const H& xt, R& rnd, F fn) {
       auto yt = transposeWithDegreeOmp(y);
       fn(y, yt, deletions, insertions);
     }
-    if (d<=DELE) d BATCH_DELETIONS_STEP;
-    if (i<=INSE) i BATCH_INSERTIONS_STEP;
+    if (d>=BATCH_DELETIONS_END && i>=BATCH_INSERTIONS_END) break;
+    d BATCH_DELETIONS_STEP;
+    i BATCH_INSERTIONS_STEP;
+    d = min(d, size_t(BATCH_DELETIONS_END));
+    i = min(i, size_t(BATCH_INSERTIONS_END));
   }
+}
+
+
+template <class G, class R, class F>
+inline void runRelativeBatches(const G& x, R& rnd, F fn) {
+  double d = BATCH_DELETIONS_BEGIN;
+  double i = BATCH_INSERTIONS_BEGIN;
+  while (true) {
+    for (int r=0; r<REPEAT_BATCH; ++r) {
+      auto y  = duplicate(x);
+      auto deletions  = removeRandomEdges(y, rnd, 1, x.span()-1, size_t(d * x.size()));
+      auto insertions = addRandomEdges   (y, rnd, 1, x.span()-1, size_t(i * x.size()));
+      auto yt = transposeWithDegreeOmp(y);
+      fn(y, yt, deletions, insertions);
+    }
+    if (d>=BATCH_DELETIONS_END && i>=BATCH_INSERTIONS_END) break;
+    d BATCH_DELETIONS_STEP;
+    i BATCH_INSERTIONS_STEP;
+    d = min(d, double(BATCH_DELETIONS_END));
+    i = min(i, double(BATCH_INSERTIONS_END));
+  }
+}
+
+
+template <class G, class R, class F>
+inline void runBatches(const G& x, R& rnd, F fn) {
+  if (BATCH_UNIT=="%") runRelativeBatches(x, rnd, fn);
+  else runAbsoluteBatches(x, rnd, fn);
 }
 
 
@@ -159,7 +176,7 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
-  runBatches(x, xt, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
+  runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
     auto fc = [](bool v) { return v==true; };
     size_t affectedCount = countIf(pagerankAffectedVerticesTraversal(x, deletions, insertions), fc);
     runFailures(y, [&](int failureDuration, float failureProbability, int failureThreads, auto fv) {
