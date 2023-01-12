@@ -19,7 +19,7 @@ using namespace std;
 #define TYPE double
 #endif
 #ifndef MAX_THREADS
-#define MAX_THREADS 24
+#define MAX_THREADS 32
 #endif
 #ifndef REPEAT_BATCH
 #define REPEAT_BATCH 5
