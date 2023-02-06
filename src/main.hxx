@@ -15,3 +15,4 @@
 #include "pagerank.hxx"
 #include "pagerankBasic.hxx"
 #include "pagerankBarrierfree.hxx"
+#include "pagerankBarrierfreeMonolithic.hxx"

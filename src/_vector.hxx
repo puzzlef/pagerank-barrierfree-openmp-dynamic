@@ -22,6 +22,23 @@ using vector2d = vector<vector<T>>;
 
 
 
+// JOIN
+// ----
+
+template <class T>
+inline void joinValuesW(vector<T>& a, const vector2d<T>& xs) {
+  for (const vector<T>& x : xs)
+    a.insert(a.end(), x.begin(), x.end());
+}
+template <class T>
+inline vector<T> joinValues(const vector2d<T>& xs) {
+  vector<T> a; joinValuesW(a, xs);
+  return a;
+}
+
+
+
+
 // GATHER VALUES
 // -------------
 

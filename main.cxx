@@ -176,6 +176,7 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
+  auto c0   = pagerankBarrierfreeMonolithicOmp<true>(x, xt, init, {1}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
     auto fc = [](bool v) { return v==true; };
@@ -212,6 +213,15 @@ void runExperiment(const G& x, const H& xt) {
       // Find multi-threaded OpenMP-based Traversal-based Dynamic Barrier-free PageRank (asynchronous, no dead ends).
       auto b3 = pagerankBarrierfreeDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
       flog(b3, r1, "pagerankBarrierfreeDynamicTraversalOmp");
+      // Find multi-threaded OpenMP-based Static Barrier-free Monolithic PageRank (asynchronous, no dead ends).
+      auto c1 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, init, {repeat}, fv);
+      flog(c1, r1, "pagerankBarrierfreeMonolithicOmp");
+      // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free Monolithic PageRank (asynchronous, no dead ends).
+      auto c2 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, &b0.ranks, {repeat}, fv);
+      flog(c2, r1, "pagerankBarrierfreeMonolithicNaiveDynamicOmp");
+      // Find multi-threaded OpenMP-based Traversal-based Dynamic Barrier-free Monolithic PageRank (asynchronous, no dead ends).
+      auto c3 = pagerankBarrierfreeMonolithicDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
+      flog(c3, r1, "pagerankBarrierfreeMonolithicDynamicTraversalOmp");
     });
   });
 }
