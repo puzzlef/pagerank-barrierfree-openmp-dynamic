@@ -28,10 +28,10 @@ using std::vector;
  * @returns pagerank result
  */
 template <bool ASYNC=false, bool DEAD=false, class G, class H, class V, class FV>
-inline PagerankResult<V> pagerankBarrierfreeMonolithicOmp(const G& x, const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
+inline PagerankResult<V> pagerankBarrierfreeMonolithicOmp(const G& x, const H& xt, const vector<V> *q, const PagerankOptions<V>& o, const PagerankData<G> *C, FV fv) {
   using K = typename H::key_type;
   K     N = xt.order();  if (N==0) return {};
-  auto ks = joinValues(components(x, xt));
+  auto ks = joinValues(componentsD(x, xt, C));
   auto fa = [](K u) { return true; };
   return pagerankOmp<ASYNC>(xt, q, o, ks, 0, N, pagerankBarrierfreeOmpLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }
@@ -56,10 +56,10 @@ inline PagerankResult<V> pagerankBarrierfreeMonolithicOmp(const G& x, const H& x
  * @returns pagerank result
  */
 template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V, class FV>
-inline PagerankResult<V> pagerankBarrierfreeMonolithicDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
+inline PagerankResult<V> pagerankBarrierfreeMonolithicDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, const PagerankData<G> *C, FV fv) {
   K    N    = yt.order();  if (N==0) return {};
-  auto ks   = joinValues(components(y, yt));
-  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversal(x, deletions, insertions), ks);
+  auto ks   = joinValues(componentsD(y, yt, C));
+  auto vaff = compressContainer(y, pagerankAffectedTraversal(x, y, deletions, insertions), ks);
   auto fa   = [&](auto u) { return vaff[u]==true; };
   return pagerankOmp<ASYNC>(yt, q, o, ks, 0, N, pagerankBarrierfreeOmpLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }

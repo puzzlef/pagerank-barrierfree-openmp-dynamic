@@ -4,10 +4,13 @@
 #include <random>
 #include <atomic>
 #include <vector>
+#include <algorithm>
 #include "_main.hxx"
 #include "csr.hxx"
 #include "vertices.hxx"
+#include "transpose.hxx"
 #include "dfs.hxx"
+#include "components.hxx"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -20,6 +23,7 @@ using std::tuple;
 using std::vector;
 using std::atomic;
 using std::move;
+using std::max;
 
 
 
@@ -74,16 +78,46 @@ struct PagerankResult {
 
 
 
+// PAGERANK DATA
+// -------------
+// Using Pagerank Data for performance!
+
+template <class G>
+struct PagerankData {
+  using K = typename G::key_type;
+  vector2d<K> components;
+  G blockgraph;
+  G blockgraphTranspose;
+};
+
+template <class G, class K>
+auto blockgraphD(const G& x, const vector2d<K>& cs, const PagerankData<G> *D) {
+  return D? D->blockgraph : blockgraph(x, cs);
+}
+
+template <class G>
+auto blockgraphTransposeD(const G& b, const PagerankData<G> *D) {
+  return D? D->blockgraphTranspose : transpose(b);
+}
+
+template <class G, class H>
+auto componentsD(const G& x, const H& xt, const PagerankData<G> *D) {
+  return D? D->components : components(x, xt);
+}
+
+
+
+
 // THREAD INFO
 // -----------
 
 struct ThreadInfo {
-  random_device dev;          // used for random sleeps
-  default_random_engine rnd;  // used for random sleeps
+  random_device dev;              // used for random sleeps
+  default_random_engine rnd;      // used for random sleeps
   system_clock::time_point stop;  // stop time point
-  int  id;                    // thread number
-  int  iteration;             // current iteration
-  bool crashed;               // error occurred?
+  int  id;         // thread number
+  int  iteration;  // current iteration
+  bool crashed;    // error occurred?
 
   ThreadInfo(int id) :
   dev(), rnd(dev()), stop(), id(id), iteration(0), crashed(false) {}
@@ -307,28 +341,45 @@ inline V pagerankErrorOmp(const vector<V>& x, const vector<V>& y, int EF, K i, K
 
 
 
-// PAGERANK AFFECTED VERTICES TRAVERSAL
-// ------------------------------------
+// PAGERANK AFFECTED (TRAVERSAL)
+// -----------------------------
 
 /**
  * Find affected vertices due to a batch update.
  * @param x original graph
+ * @param y updated graph
+ * @param ft is vertex affected? (u)
+ * @returns affected flags
+ */
+template <class G, class FT>
+inline auto pagerankAffectedTraversal(const G& x, const G& y, FT ft) {
+  auto fn = [](auto u) {};
+  vector<bool> vis(max(x.span(), y.span()));
+  y.forEachVertexKey([&](auto u) {
+    if (!ft(u)) return;
+    dfsVisitedForEachW(vis, x, u, fn);
+    dfsVisitedForEachW(vis, y, u, fn);
+  });
+  return vis;
+}
+
+
+/**
+ * Find affected vertices due to a batch update.
+ * @param y original graph
+ * @param y updated graph
  * @param deletions edge deletions in batch update
  * @param insertions edge insertions in batch update
- * @returns affected vertices
+ * @returns affected flags
  */
 template <class G, class K>
-inline auto pagerankAffectedVerticesTraversal(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+inline auto pagerankAffectedTraversal(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   auto fn = [](K u) {};
-  vector<bool> vis(x.span());
-  for (const auto& [u, v] : deletions) {
+  vector<bool> vis(max(x.span(), y.span()));
+  for (const auto& [u, v] : deletions)
     dfsVisitedForEachW(vis, x, u, fn);
-    dfsVisitedForEachW(vis, x, v, fn);
-  }
-  for (const auto& [u, v] : insertions) {
-    dfsVisitedForEachW(vis, x, u, fn);
-    dfsVisitedForEachW(vis, x, v, fn);
-  }
+  for (const auto& [u, v] : insertions)
+    dfsVisitedForEachW(vis, y, u, fn);
   return vis;
 }
 

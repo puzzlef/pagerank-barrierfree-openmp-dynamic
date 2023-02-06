@@ -225,7 +225,7 @@ template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V,
 inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   K    N    = yt.order();  if (N==0) return {};
   auto ks   = vertexKeys(yt);
-  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversal(x, deletions, insertions), ks);
+  auto vaff = compressContainer(y, pagerankAffectedTraversal(x, y, deletions, insertions), ks);
   auto fa   = [&](auto u) { return vaff[u]==true; };
   return pagerankOmp<ASYNC>(yt, q, o, ks, 0, N, pagerankBarrierfreeOmpLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }

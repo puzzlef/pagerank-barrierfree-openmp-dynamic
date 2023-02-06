@@ -16,3 +16,4 @@
 #include "pagerankBasic.hxx"
 #include "pagerankBarrierfree.hxx"
 #include "pagerankBarrierfreeMonolithic.hxx"
+#include "pagerankBarrierfreeLevelwise.hxx"

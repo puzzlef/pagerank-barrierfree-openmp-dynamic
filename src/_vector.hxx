@@ -9,6 +9,7 @@ using std::vector;
 using std::abs;
 using std::max;
 using std::fill;
+using std::accumulate;
 
 
 
@@ -33,6 +34,18 @@ inline void joinValuesW(vector<T>& a, const vector2d<T>& xs) {
 template <class T>
 inline vector<T> joinValues(const vector2d<T>& xs) {
   vector<T> a; joinValuesW(a, xs);
+  return a;
+}
+
+
+template <class T, class IS>
+inline void joinAtU(vector<T>& a, const vector2d<T>& xs, const IS& is) {
+  for (auto i : is)
+    a.insert(a.end(), xs[i].begin(), xs[i].end());
+}
+template <class T, class IS>
+inline vector<T> joinAt(const vector2d<T>& xs, const IS& is) {
+  vector<T> a; joinAtU(a, xs, is);
   return a;
 }
 
@@ -255,6 +268,59 @@ inline void multiplyValuesOmpW(vector<TA>& a, const vector<TX>& x, const vector<
 template <class TA, class TX, class TY>
 inline void multiplyValuesOmpW(vector<TA>& a, const vector<TX>& x, const vector<TY>& y, size_t i, size_t N) {
   multiplyValuesOmpW(a.data()+i, x.data()+i, y.data()+i, N);
+}
+#endif
+
+
+
+
+// SUM VALUES
+// ----------
+
+template <class TX, class TA=TX>
+inline TA sumValues(const TX *x, size_t N, TA a=TA()) {
+  ASSERT(x);
+  for (size_t i=0; i<N; ++i)
+    a += TA(x[i]);
+  return a;
+}
+
+template <class TX, class TA=TX>
+inline TA sumValues(const vector<TX>& x, TA a=TA()) {
+  return sumValues(x.data(), x.size(), a);
+}
+template <class TX, class TA=TX>
+inline TA sumValues(const vector<TX>& x, size_t i, size_t N, TA a=TA()) {
+  return sumValues(x.data()+i, N, a);
+}
+
+template <class JX, class TA>
+inline TA sumValues(const JX& x, TA a=TA()) {
+  return accumulate(x.begin(), x.end(), a);
+}
+template <class JX>
+inline auto sumValues(const JX& x) {
+  using TA = decltype(firstValue(x));
+  return accumulate(x.begin(), x.end(), TA());
+}
+
+
+#ifdef OPENMP
+template <class TX, class TA=TX>
+inline TA sumValuesOmp(const TX *x, size_t N, TA a=TA()) {
+  ASSERT(x);
+  #pragma omp parallel for schedule(auto) reduction(+:a)
+  for (size_t i=0; i<N; ++i)
+    a[i] += TA(x[i]);
+}
+
+template <class TX, class TA=TX>
+inline TA sumValuesOmp(const vector<TX>& x, TA a=TA()) {
+  sumValuesOmp(x.data(), x.size(), a);
+}
+template <class TX, class TA=TX>
+inline TA sumValuesOmp(const vector<TX>& x, size_t i, size_t N, TA a=TA()) {
+  sumValuesOmp(x.data()+i, N, a);
 }
 #endif
 

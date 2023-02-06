@@ -9,6 +9,7 @@ using std::iterator_traits;
 using std::vector;
 using std::unordered_map;
 using std::all_of;
+using std::count;
 using std::count_if;
 using std::equal;
 using std::copy;
@@ -104,6 +105,11 @@ inline bool equalValues(const JX& x, const JY& y, FE fe) {
 template <class J, class F>
 inline size_t countIf(const J& x, F fn) {
   return count_if(x.begin(), x.end(), fn);
+}
+
+template <class J, class T>
+inline size_t countValue(const J& x, const T& v) {
+  return count(x.begin(), x.end(), v);
 }
 
 

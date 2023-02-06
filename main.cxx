@@ -169,6 +169,7 @@ void runExperiment(const G& x, const H& xt) {
   using  K = typename G::key_type;
   using  V = TYPE;
   vector<V> *init = nullptr;
+  PagerankData<G> *nodata = nullptr;
   random_device dev;
   default_random_engine rnd(dev());
   int repeat = REPEAT_METHOD;
@@ -176,20 +177,27 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
-  auto c0   = pagerankBarrierfreeMonolithicOmp<true>(x, xt, init, {1}, fnop);
+  auto c0   = pagerankBarrierfreeMonolithicOmp<true>(x, xt, init, {1}, nodata, fnop);
+  auto d0   = pagerankBarrierfreeLevelwiseOmp<true> (x, xt, init, {1}, nodata, fnop);
   // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
-    auto fc = [](bool v) { return v==true; };
-    size_t affectedCount = countIf(pagerankAffectedVerticesTraversal(x, deletions, insertions), fc);
+    // Generate common Pagerank data for speeding up experiment.
+    auto cs = components(y, yt);
+    auto b  = blockgraph(y, cs);
+    auto bt = transpose(b);
+    auto gs = levelwiseGroupedComponentsFrom(cs, b, bt);
+    size_t CS = cs.size(), GS = gs.size();
+    PagerankData<G> C {move(cs), move(b), move(bt)};
+    size_t affectedCount = countValue(pagerankAffectedTraversal(x, y, deletions, insertions), true);
     runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
       // Follow a specific result logging format, which can be easily parsed later.
       auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {
         auto ear = pagerankBasicOmp(yt, &ans.ranks, {1}, fnop);
         auto err = l1NormOmp(ans.ranks, ref.ranks);
         LOG(
-          "{-%.3e/+%.3e batch, %.3e aff, %03d/%03d threads %04dms @ %.2e %s failure} -> "
+          "{-%.3e/+%.3e batch, %.3e aff, %.3e sccs, %.3e levels, %03d/%03d threads %04dms @ %.2e %s failure} -> "
           "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early] %s\n",
-          double(deletions.size()), double(insertions.size()), double(affectedCount),
+          double(deletions.size()), double(insertions.size()), double(affectedCount), double(CS), double(GS),
           failureThreads, MAX_THREADS, failureDuration, failureProbability, FAILURE_TYPE,
           ans.correctedTime, ans.time, ans.iterations, err, ear.iterations-1, technique
         );
@@ -214,14 +222,23 @@ void runExperiment(const G& x, const H& xt) {
       auto b3 = pagerankBarrierfreeDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
       flog(b3, r1, "pagerankBarrierfreeDynamicTraversalOmp");
       // Find multi-threaded OpenMP-based Static Barrier-free Monolithic PageRank (asynchronous, no dead ends).
-      auto c1 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, init, {repeat}, fv);
+      auto c1 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, init, {repeat}, &C, fv);
       flog(c1, r1, "pagerankBarrierfreeMonolithicOmp");
       // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free Monolithic PageRank (asynchronous, no dead ends).
-      auto c2 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, &b0.ranks, {repeat}, fv);
+      auto c2 = pagerankBarrierfreeMonolithicOmp<true>(y, yt, &c0.ranks, {repeat}, &C, fv);
       flog(c2, r1, "pagerankBarrierfreeMonolithicNaiveDynamicOmp");
       // Find multi-threaded OpenMP-based Traversal-based Dynamic Barrier-free Monolithic PageRank (asynchronous, no dead ends).
-      auto c3 = pagerankBarrierfreeMonolithicDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
+      auto c3 = pagerankBarrierfreeMonolithicDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &c0.ranks, {repeat}, &C, fv);
       flog(c3, r1, "pagerankBarrierfreeMonolithicDynamicTraversalOmp");
+      // Find multi-threaded OpenMP-based Static Barrier-free Levelwise PageRank (asynchronous, no dead ends).
+      auto d1 = pagerankBarrierfreeLevelwiseOmp<true>(y, yt, init, {repeat}, &C, fv);
+      flog(d1, r1, "pagerankBarrierfreeLevelwiseOmp");
+      // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free Levelwise PageRank (asynchronous, no dead ends).
+      auto d2 = pagerankBarrierfreeLevelwiseOmp<true>(y, yt, &d0.ranks, {repeat}, &C, fv);
+      flog(d2, r1, "pagerankBarrierfreeLevelwiseNaiveDynamicOmp");
+      // Find multi-threaded OpenMP-based Traversal-based Dynamic Barrier-free Levelwise PageRank (asynchronous, no dead ends).
+      auto d3 = pagerankBarrierfreeLevelwiseDynamicTraversalOmp<true>(x, xt, y, yt, deletions, insertions, &d0.ranks, {repeat}, &C, fv);
+      flog(d3, r1, "pagerankBarrierfreeLevelwiseDynamicTraversalOmp");
     });
   });
 }
