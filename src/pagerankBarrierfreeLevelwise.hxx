@@ -47,19 +47,20 @@ template <bool ASYNC=false, bool DEAD=false, class K, class V, class NS, class F
 inline int pagerankBarrierfreeLevelwiseOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, vector<V>& c, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, const vector<K>& vdeg, K N, V P, V E, int L, int EF, K i, NS ns, vector<ThreadInfo*>& threads, FV fv, FA fa) {
   if (EF!=LI_NORM) return 0;
   pagerankBarrierfreeInitializeConvergedOmp(e, i, sumValues(ns), fa);
-  #pragma omp parallel private(i)
+  #pragma omp parallel
   {
+    K      j = i;
     int    t = omp_get_thread_num();
     float& l = threads[t]->iteration;
     for (auto n : ns) {
       while (l<L) {
         V C0 = DEAD? pagerankBarrierfreeTeleportOmp(r, vdeg, P, N) : (1-P)/N;
-        pagerankBarrierfreeCalculateRanksOmp(e, a, r, f, xv, xe, C0, E, i, n, threads[t], fv, fa); l += float(n)/N;  // update ranks of vertices
+        pagerankBarrierfreeCalculateRanksOmp(e, a, r, f, xv, xe, C0, E, j, n, threads[t], fv, fa); l += float(n)/N;  // update ranks of vertices
         if (!ASYNC) swap(a, r);                            // final ranks in (r)
-        if (pagerankBarrierfreeConverged(e, i, n)) break;  // check tolerance
+        if (pagerankBarrierfreeConverged(e, j, n)) break;  // check tolerance
         if (threads[t]->crashed) break;                    // simulate crash
       }
-      i += n;
+      j += n;
     }
     threads[t]->stop = timeNow();
   }

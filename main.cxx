@@ -195,7 +195,7 @@ void runExperiment(const G& x, const H& xt) {
         auto ear = pagerankBasicOmp(yt, &ans.ranks, {1}, fnop);
         auto err = l1NormOmp(ans.ranks, ref.ranks);
         LOG(
-          "{-%.3e/+%.3e batch, %.3e aff, %.3e sccs, %.3e levels, %03d/%03d threads %04dms @ %.2e %s failure} -> "
+          "{-%.3e/+%.3e batch, %.3e aff, %.3e coms, %.3e levels, %03d/%03d threads %04dms @ %.2e %s failure} -> "
           "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early] %s\n",
           double(deletions.size()), double(insertions.size()), double(affectedCount), double(CS), double(GS),
           failureThreads, MAX_THREADS, failureDuration, failureProbability, FAILURE_TYPE,
