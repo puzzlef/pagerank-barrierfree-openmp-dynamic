@@ -115,9 +115,9 @@ struct ThreadInfo {
   random_device dev;              // used for random sleeps
   default_random_engine rnd;      // used for random sleeps
   system_clock::time_point stop;  // stop time point
-  int  id;         // thread number
-  int  iteration;  // current iteration
-  bool crashed;    // error occurred?
+  int   id;         // thread number
+  float iteration;  // current iteration
+  bool  crashed;    // error occurred?
 
   ThreadInfo(int id) :
   dev(), rnd(dev()), stop(), id(id), iteration(0), crashed(false) {}
@@ -151,8 +151,8 @@ inline int threadInfosCrashedCount(const vector<ThreadInfo*>& threads) {
   return a;
 }
 
-inline int threadInfosMaxIteration(const vector<ThreadInfo*>& threads) {
-  int N = threads.size(), a = 0;
+inline float threadInfosMaxIteration(const vector<ThreadInfo*>& threads) {
+  int N = threads.size(); float a = 0;
   for (int i=0; i<N; ++i) {
     if (threads[i]->crashed) continue;
     if (threads[i]->iteration > a) a = threads[i]->iteration;

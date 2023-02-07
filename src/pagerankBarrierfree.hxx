@@ -163,8 +163,8 @@ inline int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r
   pagerankBarrierfreeInitializeConvergedOmp(e, i, n, fa);
   #pragma omp parallel
   {
-    int  t = omp_get_thread_num();
-    int& l = threads[t]->iteration;
+    int    t = omp_get_thread_num();
+    float& l = threads[t]->iteration;
     while (l<L) {
       V C0 = DEAD? pagerankBarrierfreeTeleportOmp(r, vdeg, P, N) : (1-P)/N;
       pagerankBarrierfreeCalculateRanksOmp(e, a, r, f, xv, xe, C0, E, i, n, threads[t], fv, fa); ++l;  // update ranks of vertices
@@ -174,7 +174,7 @@ inline int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r
     }
     threads[t]->stop = timeNow();
   }
-  int l = threadInfosMaxIteration(threads);
+  int l = int(threadInfosMaxIteration(threads));
   if (!ASYNC && (l & 1)==1) swap(a, r);
   return l;
 }

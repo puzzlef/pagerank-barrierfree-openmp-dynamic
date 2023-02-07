@@ -49,12 +49,12 @@ inline int pagerankBarrierfreeLevelwiseOmpLoop(vector<int>& e, vector<V>& a, vec
   pagerankBarrierfreeInitializeConvergedOmp(e, i, sumValues(ns), fa);
   #pragma omp parallel private(i)
   {
-    int  t = omp_get_thread_num();
-    int& l = threads[t]->iteration;
+    int    t = omp_get_thread_num();
+    float& l = threads[t]->iteration;
     for (auto n : ns) {
       while (l<L) {
         V C0 = DEAD? pagerankBarrierfreeTeleportOmp(r, vdeg, P, N) : (1-P)/N;
-        pagerankBarrierfreeCalculateRanksOmp(e, a, r, f, xv, xe, C0, E, i, n, threads[t], fv, fa); ++l;  // update ranks of vertices
+        pagerankBarrierfreeCalculateRanksOmp(e, a, r, f, xv, xe, C0, E, i, n, threads[t], fv, fa); l += float(n)/N;  // update ranks of vertices
         if (!ASYNC) swap(a, r);                            // final ranks in (r)
         if (pagerankBarrierfreeConverged(e, i, n)) break;  // check tolerance
         if (threads[t]->crashed) break;                    // simulate crash
@@ -63,7 +63,7 @@ inline int pagerankBarrierfreeLevelwiseOmpLoop(vector<int>& e, vector<V>& a, vec
     }
     threads[t]->stop = timeNow();
   }
-  int l = threadInfosMaxIteration(threads);
+  int l = int(threadInfosMaxIteration(threads));
   if (!ASYNC && (l & 1)==1) swap(a, r);
   return l;
 }
