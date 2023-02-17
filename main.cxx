@@ -127,7 +127,7 @@ inline void runSleepFailures(const G& x, F fn) {
     for (double p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
       for  (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
         chrono::milliseconds sd(d);
-        double sp = p / x.order();
+        double sp = p;
         auto  fv = [&](ThreadInfo *thread, auto v) {
           uniform_real_distribution<double> dis(0.0, 1.0);
           if (thread->id < t && dis(thread->rnd) < sp) this_thread::sleep_for(sd);
@@ -144,7 +144,7 @@ inline void runCrashFailures(const G& x, F fn) {
   // Randomly crash (simulated) after processing each vertex.
   for (double p=FAILURE_PROBABILITY_BEGIN; p<=FAILURE_PROBABILITY_END; p FAILURE_PROBABILITY_STEP) {
     for  (int t=FAILURE_THREADS_BEGIN;     t<=FAILURE_THREADS_END;     t FAILURE_THREADS_STEP) {
-      double cp = p / x.order();
+      double cp = p;
       auto  fv = [&](ThreadInfo *thread, auto v) {
         uniform_real_distribution<double> dis(0.0, 1.0);
         if (thread->id < t && dis(thread->rnd) < cp) thread->crashed = true;
@@ -187,10 +187,10 @@ void runExperiment(const G& x, const H& xt) {
         auto err = l1NormOmp(ans.ranks, ref.ranks);
         LOG(
           "{-%.3e/+%.3e batch, %.3e aff, %03d/%03d threads %04dms @ %.2e %s failure} -> "
-          "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early] %s\n",
+          "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early, %03d crashed] %s\n",
           double(deletions.size()), double(insertions.size()), double(affectedCount),
           failureThreads, MAX_THREADS, failureDuration, failureProbability, FAILURE_TYPE,
-          ans.correctedTime, ans.time, ans.iterations, err, ear.iterations-1, technique
+          ans.correctedTime, ans.time, ans.iterations, err, ear.iterations-1, ans.crashedCount, technique
         );
       };
       auto r1 = pagerankBasicOmp(yt, init, {1}, fnop);
