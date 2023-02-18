@@ -5,9 +5,8 @@
 #include <atomic>
 #include <tuple>
 #include <vector>
+#include <algorithm>
 #include "_main.hxx"
-#include "csr.hxx"
-#include "vertices.hxx"
 #include "dfs.hxx"
 
 #ifdef OPENMP
@@ -22,6 +21,7 @@ using std::vector;
 using std::atomic;
 using std::get;
 using std::move;
+using std::max;
 
 
 
@@ -141,69 +141,42 @@ inline float threadInfosMinDuration(const vector<ThreadInfo*>& threads, system_c
 
 
 
-// PAGERANK FACTOR
-// ---------------
-// For contribution factors of vertices (unchanging).
-
-/**
- * Calculate rank scaling factor for each vertex.
- * @param a rank scaling factor for each vertex (output)
- * @param vdeg out-degree of each vertex
- * @param P damping factor [0.85]
- * @param i vertex start
- * @param n vertex count
- */
-template <class K, class V>
-inline void pagerankFactor(vector<V>& a, const vector<K>& vdeg, V P, K i, K n) {
-  for (K u=i; u<i+n; ++u) {
-    K  d = vdeg[u];
-    a[u] = d>0? P/d : 0;
-  }
-}
-
-
-#ifdef OPENMP
-template <class K, class V>
-inline void pagerankFactorOmp(vector<V>& a, const vector<K>& vdeg, V P, K i, K n) {
-  #pragma omp parallel for schedule(auto)
-  for (K u=i; u<i+n; ++u) {
-    K  d = vdeg[u];
-    a[u] = d>0? P/d : 0;
-  }
-}
-#endif
-
-
-
-
 // PAGERANK TELEPORT
 // -----------------
 // For teleport contribution from vertices (inc. dead ends).
 
 /**
- * Find total teleport contribution from each vertex (inc. deade ends).
+ * Find total teleport contribution from each vertex (inc. dead ends).
+ * @param xt transpose of original graph
  * @param r rank of each vertex
- * @param vdeg out-degree of each vertex
  * @param P damping factor [0.85]
- * @param N total number of vertices
  * @returns common teleport rank contribution to each vertex
  */
-template <class K, class V>
-inline V pagerankTeleport(const vector<V>& r, const vector<K>& vdeg, V P, K N) {
+template <class H, class V>
+inline V pagerankTeleport(const H& xt, const vector<V>& r, V P) {
+  using  K = typename H::key_type;
+  size_t N = xt.order();
   V a = (1-P)/N;
-  for (K u=0; u<N; ++u)
-    if (vdeg[u]==0) a += P * r[u]/N;
+  xt.forEachVertex([&](auto u, auto d) {
+    if (d==0) a += P * r[u]/N;
+  });
   return a;
 }
 
 
 #ifdef OPENMP
-template <class K, class V>
-inline V pagerankTeleportOmp(const vector<V>& r, const vector<K>& vdeg, V P, K N) {
+template <class H, class V>
+inline V pagerankTeleportOmp(const H& xt, const vector<V>& r, V P) {
+  using  K = typename H::key_type;
+  size_t S = xt.span();
+  size_t N = xt.order();
   V a = (1-P)/N;
   #pragma omp parallel for schedule(auto) reduction(+:a)
-  for (K u=0; u<N; ++u)
-    if (vdeg[u]==0) a += P * r[u]/N;
+  for (K u=0; u<S; ++u) {
+    if (!xt.hasVertex(u)) continue;
+    K   d = xt.vertexValue(u);
+    if (d==0) a += P * r[u]/N;
+  }
   return a;
 }
 #endif
@@ -218,17 +191,19 @@ inline V pagerankTeleportOmp(const vector<V>& r, const vector<K>& vdeg, V P, K N
 /**
  * Calculate rank for a given vertex.
  * @param a current rank of each vertex (output)
- * @param c rank contribution from each vertex
- * @param xv edge offsets for each vertex in the graph
- * @param xe target vertices for each edge in the graph
+ * @param xt transpose of original graph
+ * @param r previous rank of each vertex
  * @param v given vertex
  * @param C0 common teleport rank contribution to each vertex
+ * @param P damping factor [0.85]
  */
-template <class K, class V>
-inline void pagerankCalculateRank(vector<V>& a, const vector<V>& c, const vector<size_t>& xv, const vector<K>& xe, K v, V C0) {
+template <class H, class K, class V>
+inline void pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
   V av = C0;
-  for (size_t i=xv[v], I=xv[v+1]; i<I; ++i)
-    av += c[xe[i]];
+  xt.forEachEdgeKey(v, [&](auto u) {
+    K d = xt.vertexData(u);
+    av += P * r[u]/d;
+  });
   a[v] = av;
 }
 
@@ -236,34 +211,36 @@ inline void pagerankCalculateRank(vector<V>& a, const vector<V>& c, const vector
 /**
  * Calculate ranks for vertices in a graph.
  * @param a current rank of each vertex (output)
- * @param c rank contribution from each vertex
- * @param xv edge offsets for each vertex in the graph
- * @param xe target vertices for each edge in the graph
+ * @param xt transpose of original graph
+ * @param r previous rank of each vertex
  * @param C0 common teleport rank contribution to each vertex
- * @param i vertex start
- * @param n vertex count
+ * @param P damping factor [0.85]
  * @param thread information on current thread (updated)
  * @param fv per vertex processing (thread, vertex)
  * @param fa is vertex affected? (vertex)
  */
-template <class K, class V, class FV, class FA>
-inline void pagerankCalculateRanks(vector<V>& a, const vector<V>& c, const vector<size_t>& xv, const vector<K>& xe, V C0, K i, K n, ThreadInfo *thread, FV fv, FA fa) {
-  for (K v=i; v<i+n; ++v) {
-    if (!fa(v)) continue;
-    pagerankCalculateRank(a, c, xv, xe, v, C0);
+template <class H, class V, class FV, class FA>
+inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, ThreadInfo *thread, FV fv, FA fa) {
+  using  K = typename H::key_type;
+  size_t S = xt.span();
+  for (K v=0; v<S; ++v) {
+    if (!xt.hasVertex(v) || !fa(v)) continue;
+    pagerankCalculateRank(a, xt, r, v, C0, P);
     fv(thread, v);
   }
 }
 
 
 #ifdef OPENMP
-template <class K, class V, class FV, class FA>
-inline void pagerankCalculateRanksOmp(vector<V>& a, const vector<V>& c, const vector<size_t>& xv, const vector<K>& xe, V C0, K i, K n, vector<ThreadInfo*>& threads, FV fv, FA fa) {
+template <class H, class V, class FV, class FA>
+inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, vector<ThreadInfo*>& threads, FV fv, FA fa) {
+  using  K = typename H::key_type;
+  size_t S = xt.span();
   #pragma omp parallel for schedule(dynamic, 2048)
-  for (K v=i; v<i+n; ++v) {
-    if (!fa(v)) continue;
+  for (K v=0; v<S; ++v) {
+    if (!xt.hasVertex(v) || !fa(v)) continue;
     int t = omp_get_thread_num();
-    pagerankCalculateRank(a, c, xv, xe, v, C0);
+    pagerankCalculateRank(a, xt, r, v, C0, P);
     fv(threads[t], v);
   }
 }
@@ -281,27 +258,25 @@ inline void pagerankCalculateRanksOmp(vector<V>& a, const vector<V>& c, const ve
  * @param x first rank vector
  * @param y second rank vector
  * @param EF error function (L1/L2/LI)
- * @param i vertex start
- * @param n vertex count
  * @returns error between the two rank vectors
  */
-template <class K, class V>
-inline V pagerankError(const vector<V>& x, const vector<V>& y, int EF, K i, K n) {
+template <class V>
+inline V pagerankError(const vector<V>& x, const vector<V>& y, int EF) {
   switch (EF) {
-    case 1:  return l1Norm(x, y, i, n);
-    case 2:  return l2Norm(x, y, i, n);
-    default: return liNorm(x, y, i, n);
+    case 1:  return l1Norm(x, y);
+    case 2:  return l2Norm(x, y);
+    default: return liNorm(x, y);
   }
 }
 
 
 #ifdef OPENMP
-template <class K, class V>
-inline V pagerankErrorOmp(const vector<V>& x, const vector<V>& y, int EF, K i, K N) {
+template <class V>
+inline V pagerankErrorOmp(const vector<V>& x, const vector<V>& y, int EF) {
   switch (EF) {
-    case 1:  return l1NormOmp(x, y, i, N);
-    case 2:  return l2NormOmp(x, y, i, N);
-    default: return liNormOmp(x, y, i, N);
+    case 1:  return l1NormOmp(x, y);
+    case 2:  return l2NormOmp(x, y);
+    default: return liNormOmp(x, y);
   }
 }
 #endif
@@ -314,49 +289,44 @@ inline V pagerankErrorOmp(const vector<V>& x, const vector<V>& y, int EF, K i, K
 
 /**
  * Find affected vertices due to a batch update.
+ * @param vis affected flags (output)
  * @param x original graph
  * @param y updated graph
  * @param ft is vertex affected? (u)
- * @returns affected flags
  */
-template <class G, class FT>
-inline auto pagerankAffectedTraversal(const G& x, const G& y, FT ft) {
+template <class B, class G, class FT>
+inline void pagerankAffectedTraversalW(vector<B>& vis, const G& x, const G& y, FT ft) {
   auto fn = [](auto u) {};
-  vector<bool> vis(max(x.span(), y.span()));
   y.forEachVertexKey([&](auto u) {
     if (!ft(u)) return;
     dfsVisitedForEachW(vis, x, u, fn);
     dfsVisitedForEachW(vis, y, u, fn);
   });
-  return vis;
 }
 
 
 /**
  * Find affected vertices due to a batch update.
- * @param y original graph
+ * @param vis affected flags (output)
+ * @param x original graph
  * @param y updated graph
  * @param deletions edge deletions in batch update
  * @param insertions edge insertions in batch update
- * @returns affected flags
  */
-template <class B=bool, class G, class K>
-inline auto pagerankAffectedTraversal(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+template <class B, class G, class K>
+inline void pagerankAffectedTraversalW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   auto fn = [](K u) {};
-  vector<B> vis(max(x.span(), y.span()));
   for (const auto& [u, v] : deletions)
     dfsVisitedForEachW(vis, x, u, fn);
   for (const auto& [u, v] : insertions)
     dfsVisitedForEachW(vis, y, u, fn);
-  return vis;
 }
 
 
 #ifdef OPENMP
-template <class B=char, class G, class K>
-inline auto pagerankAffectedTraversalOmp(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+template <class B, class G, class K>
+inline void pagerankAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   auto fn = [](K u) {};
-  vector<B> vis(max(x.span(), y.span()));
   #pragma omp parallel for schedule(auto)
   for (size_t i=0, I=deletions.size(); i<I; ++i) {
     K u = get<0>(deletions[i]);
@@ -367,7 +337,6 @@ inline auto pagerankAffectedTraversalOmp(const G& x, const G& y, const vector<tu
     K u = get<0>(insertions[i]);
     dfsVisitedForEachW(vis, y, u, fn);
   }
-  return vis;
 }
 #endif
 
@@ -383,44 +352,35 @@ inline auto pagerankAffectedTraversalOmp(const G& x, const G& y, const vector<tu
  * @param xt transpose of original graph
  * @param q initial ranks
  * @param o pagerank options
- * @param ks vertices (keys) to process
- * @param i vertex start
- * @param ns vertex count(s)
  * @param fl update loop
- * @param fv per vertex processing (thread, vertex)
- * @param fa is vertex affected? (vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, class H, class V, class KS, class NS, class FL, class FV, class FA>
-PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, const KS& ks, size_t i, const NS& ns, FL fl, FV fv, FA fa) {
-  using K  = typename H::key_type;
-  K   N  = xt.order();
+template <bool ASYNC=false, class H, class V, class FL>
+PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FL fl) {
+  using  K = typename H::key_type;
+  size_t S = xt.span();
+  size_t N = xt.order();
   V   P  = o.damping;
   V   E  = o.tolerance;
   int L  = o.maxIterations, l = 0;
   int EF = o.toleranceNorm;
-  auto xv   = sourceOffsets(xt, ks);
-  auto xe   = destinationIndices(xt, ks);
-  auto vdeg = vertexData(xt, ks);
   vector<ThreadInfo*> threads = threadInfos(1);
-  vector<int> e(N); vector<V> a(N), r(N), c(N), f(N), qc;
-  if (q) qc = compressContainer(xt, *q, ks);
+  vector<int> e(S); vector<V> a(S), r(S);
   float tcorrected = 0;
   float t = measureDuration([&]() {
     auto start = timeNow();
     threadInfosClear(threads);
     fillValueU(e, 0);
-    if (q) copyValuesW(r, qc);
+    if (q) copyValuesW(r, *q);
     else   fillValueU (r, V(1)/N);
     if (!ASYNC) copyValuesW(a, r);
-    pagerankFactor(f, vdeg, P, K(), N); multiplyValuesW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
-    l = fl(e, ASYNC? r : a, r, c, f, xv, xe, vdeg, N, P, E, L, EF, K(i), ns, threads, fv, fa);  // calculate ranks of vertices
+    l = fl(e, ASYNC? r : a, r, xt, P, E, L, EF, threads);
     tcorrected += threadInfosMinDuration(threads, start);
   }, o.repeat);
   float correctedTime = tcorrected>0? tcorrected / o.repeat : t;
   int   crashedCount  = threadInfosCrashedCount(threads);
   threadInfosDelete(threads);
-  return {decompressContainer(xt, r, ks), l, t, correctedTime, crashedCount};
+  return {r, l, t, correctedTime, crashedCount};
 }
 
 
@@ -436,44 +396,35 @@ PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOpt
  * @param xt transpose of original graph
  * @param q initial ranks
  * @param o pagerank options
- * @param ks vertices (keys) to process
- * @param i vertex start
- * @param ns vertex count(s)
  * @param fl update loop
- * @param fv per vertex processing (thread, vertex)
- * @param fa is vertex affected? (vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, class H, class V, class KS, class NS, class FL, class FV, class FA>
-PagerankResult<V> pagerankOmp(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, const KS& ks, size_t i, const NS& ns, FL fl, FV fv, FA fa) {
-  using K  = typename H::key_type;
-  K   N  = xt.order();
+template <bool ASYNC=false, class H, class V, class FL>
+PagerankResult<V> pagerankOmp(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FL fl) {
+  using  K = typename H::key_type;
+  size_t S = xt.span();
+  size_t N = xt.order();
   V   P  = o.damping;
   V   E  = o.tolerance;
   int L  = o.maxIterations, l = 0;
   int EF = o.toleranceNorm;
   int TH = omp_get_max_threads();
-  auto xv   = sourceOffsets(xt, ks);
-  auto xe   = destinationIndices(xt, ks);
-  auto vdeg = vertexData(xt, ks);
   vector<ThreadInfo*> threads = threadInfos(TH);
-  vector<int> e(N); vector<V> a(N), r(N), c(N), f(N), qc;
-  if (q) qc = compressContainer(xt, *q, ks);
+  vector<int> e(S); vector<V> a(S), r(S);
   float tcorrected = 0;
   float t = measureDuration([&]() {
     auto start = timeNow();
     threadInfosClear(threads);
     fillValueU(e, 0);
-    if (q) copyValuesOmpW(r, qc);
+    if (q) copyValuesOmpW(r, *q);
     else   fillValueOmpU (r, V(1)/N);
     if (!ASYNC) copyValuesOmpW(a, r);
-    pagerankFactorOmp(f, vdeg, P, K(), N); multiplyValuesOmpW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
-    l = fl(e, ASYNC? r : a, r, c, f, xv, xe, vdeg, N, P, E, L, EF, K(i), ns, threads, fv, fa);  // calculate ranks of vertices
+    l = fl(e, ASYNC? r : a, r, xt, P, E, L, EF, threads);
     tcorrected += threadInfosMinDuration(threads, start);
   }, o.repeat);
   float correctedTime = tcorrected>0? tcorrected / o.repeat : t;
   int   crashedCount  = threadInfosCrashedCount(threads);
   threadInfosDelete(threads);
-  return {decompressContainer(xt, r, ks), l, t, correctedTime, crashedCount};
+  return {r, l, t, correctedTime, crashedCount};
 }
 #endif
