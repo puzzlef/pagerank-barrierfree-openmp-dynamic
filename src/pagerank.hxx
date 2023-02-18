@@ -3,6 +3,7 @@
 #include <chrono>
 #include <random>
 #include <atomic>
+#include <tuple>
 #include <vector>
 #include "_main.hxx"
 #include "csr.hxx"
@@ -19,6 +20,7 @@ using std::chrono::system_clock;
 using std::tuple;
 using std::vector;
 using std::atomic;
+using std::get;
 using std::move;
 
 
@@ -307,30 +309,67 @@ inline V pagerankErrorOmp(const vector<V>& x, const vector<V>& y, int EF, K i, K
 
 
 
-// PAGERANK AFFECTED VERTICES TRAVERSAL
-// ------------------------------------
+// PAGERANK AFFECTED (TRAVERSAL)
+// -----------------------------
 
 /**
  * Find affected vertices due to a batch update.
  * @param x original graph
+ * @param y updated graph
+ * @param ft is vertex affected? (u)
+ * @returns affected flags
+ */
+template <class G, class FT>
+inline auto pagerankAffectedTraversal(const G& x, const G& y, FT ft) {
+  auto fn = [](auto u) {};
+  vector<bool> vis(max(x.span(), y.span()));
+  y.forEachVertexKey([&](auto u) {
+    if (!ft(u)) return;
+    dfsVisitedForEachW(vis, x, u, fn);
+    dfsVisitedForEachW(vis, y, u, fn);
+  });
+  return vis;
+}
+
+
+/**
+ * Find affected vertices due to a batch update.
+ * @param y original graph
+ * @param y updated graph
  * @param deletions edge deletions in batch update
  * @param insertions edge insertions in batch update
- * @returns affected vertices
+ * @returns affected flags
  */
-template <class G, class K>
-inline auto pagerankAffectedVerticesTraversal(const G& x, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+template <class B=bool, class G, class K>
+inline auto pagerankAffectedTraversal(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   auto fn = [](K u) {};
-  vector<bool> vis(x.span());
-  for (const auto& [u, v] : deletions) {
+  vector<B> vis(max(x.span(), y.span()));
+  for (const auto& [u, v] : deletions)
     dfsVisitedForEachW(vis, x, u, fn);
-    dfsVisitedForEachW(vis, x, v, fn);
+  for (const auto& [u, v] : insertions)
+    dfsVisitedForEachW(vis, y, u, fn);
+  return vis;
+}
+
+
+#ifdef OPENMP
+template <class B=char, class G, class K>
+inline auto pagerankAffectedTraversalOmp(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+  auto fn = [](K u) {};
+  vector<B> vis(max(x.span(), y.span()));
+  #pragma omp parallel for schedule(auto)
+  for (size_t i=0, I=deletions.size(); i<I; ++i) {
+    K u = get<0>(deletions[i]);
+    dfsVisitedForEachW(vis, x, u, fn);
   }
-  for (const auto& [u, v] : insertions) {
-    dfsVisitedForEachW(vis, x, u, fn);
-    dfsVisitedForEachW(vis, x, v, fn);
+  #pragma omp parallel for schedule(auto)
+  for (size_t i=0, I=insertions.size(); i<I; ++i) {
+    K u = get<0>(insertions[i]);
+    dfsVisitedForEachW(vis, y, u, fn);
   }
   return vis;
 }
+#endif
 
 
 

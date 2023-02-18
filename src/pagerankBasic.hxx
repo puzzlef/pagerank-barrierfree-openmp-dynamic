@@ -129,7 +129,7 @@ template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V,
 inline PagerankResult<V> pagerankBasicDynamicTraversalSeq(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   K    N    = yt.order();  if (N==0) return {};
   auto ks   = vertexKeys(yt);
-  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversal(x, deletions, insertions), ks);
+  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversalOmp(x, deletions, insertions), ks);
   auto fa   = [&](K u) { return vaff[u]==true; };
   return pagerankSeq<ASYNC>(yt, q, o, ks, 0, N, pagerankBasicSeqLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }
@@ -140,7 +140,7 @@ template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V,
 inline PagerankResult<V> pagerankBasicDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   K    N    = yt.order();  if (N==0) return {};
   auto ks   = vertexKeys(yt);
-  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversal(x, deletions, insertions), ks);
+  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversalOmp(x, deletions, insertions), ks);
   auto fa   = [&](K u) { return vaff[u]==true; };
   return pagerankOmp<ASYNC>(yt, q, o, ks, 0, N, pagerankBasicOmpLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }

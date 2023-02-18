@@ -132,6 +132,38 @@ inline bool pagerankBarrierfreeConverged(const vector<int>& e, K i, K n) {
 
 
 
+// PAGERANK AFFECTED (TRAVERSAL)
+// -----------------------------
+
+#ifdef OPENMP
+/**
+ * Find affected vertices due to a batch update.
+ * @param x original graph
+ * @param y updated graph
+ * @param ft is vertex affected? (u)
+ * @returns affected flags
+ */
+template <bool B=char, class G, class K>
+inline auto pagerankAffectedTraversalBarrierfreeOmp(const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+  auto fn = [](K u) {};
+  vector<B> vis(max(x.span(), y.span()));
+  #pragma omp for schedule(auto)
+  for (size_t i=0, I=deletions.size(); i<I; ++i) {
+    K u = get<0>(deletions[i]);
+    dfsVisitedForEachW(vis, x, u, fn);
+  }
+  #pragma omp for schedule(auto)
+  for (size_t i=0, I=insertions.size(); i<I; ++i) {
+    K u = get<0>(insertions[i]);
+    dfsVisitedForEachW(vis, y, u, fn);
+  }
+  return vis;
+}
+#endif
+
+
+
+
 // PAGERANK LOOP
 // -------------
 
@@ -225,7 +257,7 @@ template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V,
 inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   K    N    = yt.order();  if (N==0) return {};
   auto ks   = vertexKeys(yt);
-  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversal(x, deletions, insertions), ks);
+  auto vaff = compressContainer(y, pagerankAffectedVerticesTraversalBarrierfreeOmp(x, deletions, insertions), ks);
   auto fa   = [&](auto u) { return vaff[u]==true; };
   return pagerankOmp<ASYNC>(yt, q, o, ks, 0, N, pagerankBarrierfreeOmpLoop<ASYNC, DEAD, K, V, FV, decltype(fa)>, fv, fa);
 }
