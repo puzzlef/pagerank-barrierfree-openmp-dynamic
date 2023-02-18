@@ -201,7 +201,7 @@ template <class H, class K, class V>
 inline void pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
   V av = C0;
   xt.forEachEdgeKey(v, [&](auto u) {
-    K d = xt.vertexData(u);
+    K d = xt.vertexValue(u);
     av += P * r[u]/d;
   });
   a[v] = av;
@@ -326,14 +326,16 @@ inline void pagerankAffectedTraversalW(vector<B>& vis, const G& x, const G& y, c
 #ifdef OPENMP
 template <class B, class G, class K>
 inline void pagerankAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
-  auto fn = [](K u) {};
+  auto  fn = [](K u) {};
+  size_t D = deletions.size();
+  size_t I = insertions.size();
   #pragma omp parallel for schedule(auto)
-  for (size_t i=0, I=deletions.size(); i<I; ++i) {
+  for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
     dfsVisitedForEachW(vis, x, u, fn);
   }
   #pragma omp parallel for schedule(auto)
-  for (size_t i=0, I=insertions.size(); i<I; ++i) {
+  for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
     dfsVisitedForEachW(vis, y, u, fn);
   }

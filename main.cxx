@@ -178,8 +178,9 @@ void runExperiment(const G& x, const H& xt) {
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
-    auto fc = [](bool v) { return v==true; };
-    size_t affectedCount = countIf(pagerankAffectedVerticesTraversal(x, deletions, insertions), fc);
+    vector<bool> vaff(max(x.span(), y.span()));
+    pagerankAffectedTraversalW(vaff, x, y, deletions, insertions);
+    size_t affectedCount = countIf(vaff, [](bool v) { return v==true; });
     runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
       // Follow a specific result logging format, which can be easily parsed later.
       auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {

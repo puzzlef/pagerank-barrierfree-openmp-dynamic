@@ -65,7 +65,7 @@ template <class H, class K, class V>
 inline V pagerankCalculateRankDelta(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
   V av = C0, rv = r[v];
   xt.forEachEdgeKey(v, [&](auto u) {
-    K d = xt.vertexData(u);
+    K d = xt.vertexValue(u);
     av += P * r[u]/d;
   });
   a[v] = av;
@@ -121,7 +121,7 @@ inline void pagerankBarrierfreeInitializeConvergedOmp(vector<int>& e, const H& x
   size_t S = xt.span();
   #pragma omp for schedule(auto) nowait
   for (K u=0; u<S; ++u)
-    if (!xt.hasVertex(v) || !fa(u)) e[u] = 1;
+    if (!xt.hasVertex(u) || !fa(u)) e[u] = 1;
 }
 #endif
 
@@ -157,15 +157,17 @@ inline bool pagerankBarrierfreeConverged(const vector<int>& e, const H& xt) {
  * @param insertions edge insertions in batch update
  */
 template <class B, class G, class K>
-inline void pagerankBarrierfreeAffectedTraversalOmp(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+inline void pagerankBarrierfreeAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   auto fn = [](K u) {};
+  size_t D = deletions.size();
+  size_t I = insertions.size();
   #pragma omp for schedule(auto) nowait
-  for (size_t i=0, I=deletions.size(); i<I; ++i) {
+  for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
     dfsVisitedForEachW(vis, x, u, fn);
   }
   #pragma omp for schedule(auto) nowait
-  for (size_t i=0, I=insertions.size(); i<I; ++i) {
+  for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
     dfsVisitedForEachW(vis, y, u, fn);
   }
@@ -198,6 +200,7 @@ inline void pagerankBarrierfreeAffectedTraversalOmp(vector<B>& vis, const G& x, 
 template <bool ASYNC=false, bool DEAD=false, class H, class V, class FV, class FA, class FP>
 inline int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads, FV fv, FA fa, FP fp) {
   if (EF!=LI_NORM) return 0;
+  size_t N = xt.order();
   #pragma omp parallel
   {
     fp();
@@ -273,7 +276,7 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, cons
   return pagerankOmp<ASYNC>(yt, q, o, [&](vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==1; };
     auto fp = [&]()    { pagerankBarrierfreeAffectedTraversalOmpW(vaff, x, y, deletions, insertions); };
-    return pagerankBasicOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fp);
+    return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fp);
   });
 }
 #endif
