@@ -138,11 +138,13 @@ $ ...
 - [PageRank Algorithm, Mining massive Datasets (CS246), Stanford University](https://www.youtube.com/watch?v=ke9g8hB0MEo)
 - [The PageRank Citation Ranking: Bringing Order to the Web; Larry Page et al. (1998)](https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427)
 - [The University of Florida Sparse Matrix Collection; Timothy A. Davis et al. (2011)](https://doi.org/10.1145/2049662.2049663)
+- [Why Segmentation fault is happening in this openmp code?](https://stackoverflow.com/a/13266595/1413259)
 - [What's the difference between "static" and "dynamic" schedule in OpenMP?](https://stackoverflow.com/a/10852852/1413259)
 - [OpenMP Dynamic vs Guided Scheduling](https://stackoverflow.com/a/43047074/1413259)
 - [Assigning default values to shell variables with a single command in bash](https://stackoverflow.com/a/28085062/1413259)
 - [How to define a string literal in gcc command line?](https://stackoverflow.com/a/15220280/1413259)
 - [How to split strings over multiple lines in Bash?](https://stackoverflow.com/a/46806081/1413259)
+- [OMP_STACKSIZE :: OPENMP API Specification: Version 5.0 November 2018](https://www.openmp.org/spec-html/5.0/openmpse54.html)
 - [Macros with values :: Linuxtopia](https://www.linuxtopia.org/online_books/an_introduction_to_gcc/gccintro_35.html)
 
 <br>
