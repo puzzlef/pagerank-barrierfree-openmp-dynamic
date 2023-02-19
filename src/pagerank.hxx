@@ -424,7 +424,7 @@ inline void pagerankAffectedFrontierOmpW(vector<B>& vis, const G& x, const G& y,
  * @param fl update loop
  * @returns pagerank result
  */
-template <bool ASYNC=false, class H, class V, class FL>
+template <bool ASYNC=false, class FLAG=char, class H, class V, class FL>
 PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FL fl) {
   using  K = typename H::key_type;
   size_t S = xt.span();
@@ -434,7 +434,7 @@ PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOpt
   int L  = o.maxIterations, l = 0;
   int EF = o.toleranceNorm;
   vector<ThreadInfo*> threads = threadInfos(1);
-  vector<int> e(S); vector<V> a(S), r(S);
+  vector<FLAG> e(S); vector<V> a(S), r(S);
   float tcorrected = 0;
   float t = measureDuration([&]() {
     auto start = timeNow();
@@ -468,7 +468,7 @@ PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOpt
  * @param fl update loop
  * @returns pagerank result
  */
-template <bool ASYNC=false, class H, class V, class FL>
+template <bool ASYNC=false, class FLAG=char, class H, class V, class FL>
 PagerankResult<V> pagerankOmp(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FL fl) {
   using  K = typename H::key_type;
   size_t S = xt.span();
@@ -479,12 +479,12 @@ PagerankResult<V> pagerankOmp(const H& xt, const vector<V> *q, const PagerankOpt
   int EF = o.toleranceNorm;
   int TH = omp_get_max_threads();
   vector<ThreadInfo*> threads = threadInfos(TH);
-  vector<int> e(S); vector<V> a(S), r(S);
+  vector<FLAG> e(S); vector<V> a(S), r(S);
   float tcorrected = 0;
   float t = measureDuration([&]() {
     auto start = timeNow();
     threadInfosClear(threads);
-    fillValueU(e, 0);
+    fillValueU(e, FLAG());
     if (q) copyValuesOmpW(r, *q);
     else   fillValueOmpU (r, V(1)/N);
     if (!ASYNC) copyValuesOmpW(a, r);

@@ -65,8 +65,8 @@ inline V pagerankBarrierfreeTeleportOmp(const H& xt, const vector<V>& r, V P) {
  * @param fa is vertex affected? (vertex)
  * @param fr called if vertex rank changes (vertex)
  */
-template <class H, class V, class FV, class FA, class FR>
-inline void pagerankBarrierfreeCalculateRanksOmp(vector<int>& e, vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, V E, ThreadInfo *thread, FV fv, FA fa, FR fr) {
+template <class B, class H, class V, class FV, class FA, class FR>
+inline void pagerankBarrierfreeCalculateRanksOmp(vector<B>& e, vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, V E, ThreadInfo *thread, FV fv, FA fa, FR fr) {
   using  K = typename H::key_type;
   size_t S = xt.span();
   #pragma omp for schedule(dynamic, 2048) nowait
@@ -95,8 +95,8 @@ inline void pagerankBarrierfreeCalculateRanksOmp(vector<int>& e, vector<V>& a, c
  * @param xt transpose of original graph
  * @param fa is vertex affected? (vertex)
  */
-template <class H, class FA>
-inline void pagerankBarrierfreeInitializeConvergedOmp(vector<int>& e, const H& xt, FA fa) {
+template <class B, class H, class FA>
+inline void pagerankBarrierfreeInitializeConvergedOmp(vector<B>& e, const H& xt, FA fa) {
   using  K = typename H::key_type;
   size_t S = xt.span();
   #pragma omp for schedule(auto) nowait
@@ -112,8 +112,8 @@ inline void pagerankBarrierfreeInitializeConvergedOmp(vector<int>& e, const H& x
  * @param e change in rank for each vertex below tolerance?
  * @returns ranks converged?
  */
-template <class H>
-inline bool pagerankBarrierfreeConverged(const H& xt, const vector<int>& e) {
+template <class B, class H>
+inline bool pagerankBarrierfreeConverged(const H& xt, const vector<B>& e) {
   using  K = typename H::key_type;
   size_t S = xt.span();
   for (K u=0; u<S; ++u)
@@ -210,8 +210,8 @@ inline void pagerankBarrierfreeAffectedFrontierOmpW(vector<B>& vis, const G& x, 
  * @param fp preprocessing to perform
  * @returns iterations performed
  */
-template <bool ASYNC=false, bool DEAD=false, class H, class V, class FV, class FA, class FR, class FP>
-inline int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads, FV fv, FA fa, FR fr, FP fp) {
+template <bool ASYNC=false, bool DEAD=false, class B, class H, class V, class FV, class FA, class FR, class FP>
+inline int pagerankBarrierfreeOmpLoop(vector<B>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads, FV fv, FA fa, FR fr, FP fp) {
   if (EF!=LI_NORM) return 0;
   size_t N = xt.order();
   #pragma omp parallel
@@ -250,11 +250,11 @@ inline int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r
  * @param fv per vertex processing (thread, vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, bool DEAD=false, class H, class V, class FV>
+template <bool ASYNC=false, bool DEAD=false, class FLAG=char, class H, class V, class FV>
 inline PagerankResult<V> pagerankBarrierfreeOmp(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   using K = typename H::key_type;
   if  (xt.empty()) return {};
-  return pagerankOmp<ASYNC>(xt, q, o, [&](vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
+  return pagerankOmp<ASYNC, FLAG>(xt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [](K u) { return true; };
     auto fr = [](K u) {};
     auto fp = []() {};
@@ -283,11 +283,11 @@ inline PagerankResult<V> pagerankBarrierfreeOmp(const H& xt, const vector<V> *q,
  * @param fv per vertex processing (thread, vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V, class FV>
+template <bool ASYNC=false, bool DEAD=false, class FLAG=char, class G, class H, class K, class V, class FV>
 inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   if (xt.empty()) return {};
-  vector<char> vaff(max(x.span(), y.span()));
-  return pagerankOmp<ASYNC>(yt, q, o, [&](vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
+  vector<FLAG> vaff(max(x.span(), y.span()));
+  return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==1; };
     auto fr = [ ](K u) {};
     auto fp = [&]()    { pagerankBarrierfreeAffectedTraversalOmpW(vaff, x, y, deletions, insertions); };
@@ -316,11 +316,11 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, cons
  * @param fv per vertex processing (thread, vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, bool DEAD=false, class G, class H, class K, class V, class FV>
+template <bool ASYNC=false, bool DEAD=false, class FLAG=char, class G, class H, class K, class V, class FV>
 inline PagerankResult<V> pagerankBarrierfreeDynamicFrontierOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
   if (xt.empty()) return {};
-  vector<char> vaff(max(x.span(), y.span()));
-  return pagerankOmp<ASYNC>(yt, q, o, [&](vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
+  vector<FLAG> vaff(max(x.span(), y.span()));
+  return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==1; };
     auto fr = [&](K u) { y.forEachEdgeKey(u, [&](K v) { vaff[v] = true; }); };
     auto fp = [&]()    { pagerankBarrierfreeAffectedFrontierOmpW(vaff, x, y, deletions, insertions); };
