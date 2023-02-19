@@ -5,6 +5,7 @@
 #include <atomic>
 #include <tuple>
 #include <vector>
+#include <cmath>
 #include <algorithm>
 #include "_main.hxx"
 #include "dfs.hxx"
@@ -21,6 +22,7 @@ using std::vector;
 using std::atomic;
 using std::get;
 using std::move;
+using std::abs;
 using std::max;
 
 
@@ -196,15 +198,18 @@ inline V pagerankTeleportOmp(const H& xt, const vector<V>& r, V P) {
  * @param v given vertex
  * @param C0 common teleport rank contribution to each vertex
  * @param P damping factor [0.85]
+ * @returns change between previous and current rank value
  */
 template <class H, class K, class V>
-inline void pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
+inline V pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
   V av = C0;
+  V rv = r[v];
   xt.forEachEdgeKey(v, [&](auto u) {
     K d = xt.vertexValue(u);
     av += P * r[u]/d;
   });
   a[v] = av;
+  return abs(av - rv);
 }
 
 
@@ -215,32 +220,36 @@ inline void pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r,
  * @param r previous rank of each vertex
  * @param C0 common teleport rank contribution to each vertex
  * @param P damping factor [0.85]
+ * @param E tolerance [10^-10]
  * @param thread information on current thread (updated)
  * @param fv per vertex processing (thread, vertex)
  * @param fa is vertex affected? (vertex)
+ * @param fr called if vertex rank changes (vertex)
  */
-template <class H, class V, class FV, class FA>
-inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, ThreadInfo *thread, FV fv, FA fa) {
+template <class H, class V, class FV, class FA, class FR>
+inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, V E, ThreadInfo *thread, FV fv, FA fa, FR fr) {
   using  K = typename H::key_type;
   size_t S = xt.span();
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
-    pagerankCalculateRank(a, xt, r, v, C0, P);
+    V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
+    if (ev > E) fr(v);
     fv(thread, v);
   }
 }
 
 
 #ifdef OPENMP
-template <class H, class V, class FV, class FA>
-inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, vector<ThreadInfo*>& threads, FV fv, FA fa) {
+template <class H, class V, class FV, class FA, class FR>
+inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, V E, vector<ThreadInfo*>& threads, FV fv, FA fa, FR fr) {
   using  K = typename H::key_type;
   size_t S = xt.span();
   #pragma omp parallel for schedule(dynamic, 2048)
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
-    int t = omp_get_thread_num();
-    pagerankCalculateRank(a, xt, r, v, C0, P);
+    int  t = omp_get_thread_num();
+    V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
+    if (ev > E) fr(v);
     fv(threads[t], v);
   }
 }
@@ -338,6 +347,64 @@ inline void pagerankAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y
   for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
     dfsVisitedForEachW(vis, y, u, fn);
+  }
+}
+#endif
+
+
+
+
+// PAGERANK AFFECTED (FRONTIER)
+// ----------------------------
+
+/**
+ * Find affected vertices due to a batch update.
+ * @param vis affected flags (output)
+ * @param x original graph
+ * @param y updated graph
+ * @param ft is vertex affected? (u)
+ */
+template <class B, class G, class FT>
+inline void pagerankAffectedFrontierW(vector<B>& vis, const G& x, const G& y, FT ft) {
+  y.forEachVertexKey([&](auto u) {
+    if (!ft(u)) return;
+    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+  });
+}
+
+
+/**
+ * Find affected vertices due to a batch update.
+ * @param vis affected flags (output)
+ * @param x original graph
+ * @param y updated graph
+ * @param deletions edge deletions in batch update
+ * @param insertions edge insertions in batch update
+ */
+template <class B, class G, class K>
+inline void pagerankAffectedFrontierW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+  for (const auto& [u, v] : deletions)
+    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+  for (const auto& [u, v] : insertions)
+    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+}
+
+
+#ifdef OPENMP
+template <class B, class G, class K>
+inline void pagerankAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
+  size_t D = deletions.size();
+  size_t I = insertions.size();
+  #pragma omp parallel for schedule(auto)
+  for (size_t i=0; i<D; ++i) {
+    K u = get<0>(deletions[i]);
+    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+  }
+  #pragma omp parallel for schedule(auto)
+  for (size_t i=0; i<I; ++i) {
+    K u = get<0>(insertions[i]);
+    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
   }
 }
 #endif
