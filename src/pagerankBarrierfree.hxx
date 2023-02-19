@@ -322,7 +322,7 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicFrontierOmp(const G& x, const
   vector<char> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC>(yt, q, o, [&](vector<int>& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==1; };
-    auto fr = [&](K u) { y.forEachEdgeKey(u, [&](K v) { vaff[v] = true; }) };
+    auto fr = [&](K u) { y.forEachEdgeKey(u, [&](K v) { vaff[v] = true; }); };
     auto fp = [&]()    { pagerankBarrierfreeAffectedFrontierOmpW(vaff, x, y, deletions, insertions); };
     return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
   });
