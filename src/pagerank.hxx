@@ -233,7 +233,7 @@ inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
     V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    if (ev > E) fr(v);
+    if (ev > 0) fr(v);
     fv(thread, v);
   }
 }
@@ -249,7 +249,7 @@ inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>
     if (!xt.hasVertex(v) || !fa(v)) continue;
     int  t = omp_get_thread_num();
     V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    if (ev > E) fr(v);
+    if (ev > 0) fr(v);
     fv(threads[t], v);
   }
 }
