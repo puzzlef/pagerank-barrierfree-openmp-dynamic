@@ -185,7 +185,7 @@ void runExperiment(const G& x, const H& xt) {
       // Follow a specific result logging format, which can be easily parsed later.
       auto flog  = [&](const auto& ans, const auto& ref, const char *technique, int tfactor=1) {
         auto ear = pagerankBasicOmp(yt, &ans.ranks, {1}, fnop);
-        auto err = l1NormOmp(ans.ranks, ref.ranks);
+        auto err = liNormOmp(ans.ranks, ref.ranks);
         LOG(
           "{-%.3e/+%.3e batch, %.3e aff, %03d/%03d threads %04dms @ %.2e %s failure} -> "
           "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early, %03d crashed] %s<tolerance_factor=%03d>\n",
