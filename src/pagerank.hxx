@@ -42,13 +42,14 @@ enum NormFunction {
 template <class V>
 struct PagerankOptions {
   int repeat;
+  V   frontierTolerance;
   int toleranceNorm;
   V   tolerance;
   V   damping;
   int maxIterations;
 
-  PagerankOptions(int repeat=1, int toleranceNorm=LI_NORM, V tolerance=1e-10, V damping=0.85, int maxIterations=500) :
-  repeat(repeat), toleranceNorm(toleranceNorm), tolerance(tolerance), damping(damping), maxIterations(maxIterations) {}
+  PagerankOptions(int repeat=1, V frontierTolerance=1e-10, int toleranceNorm=LI_NORM, V tolerance=1e-10, V damping=0.85, int maxIterations=500) :
+  repeat(repeat), frontierTolerance(frontierTolerance), toleranceNorm(toleranceNorm), tolerance(tolerance), damping(damping), maxIterations(maxIterations) {}
 };
 
 
@@ -224,7 +225,7 @@ inline V pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K 
  * @param thread information on current thread (updated)
  * @param fv per vertex processing (thread, vertex)
  * @param fa is vertex affected? (vertex)
- * @param fr called if vertex rank changes (vertex)
+ * @param fr called if vertex rank changes (vertex, delta)
  */
 template <class H, class V, class FV, class FA, class FR>
 inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r, V C0, V P, V E, ThreadInfo *thread, FV fv, FA fa, FR fr) {
@@ -233,7 +234,7 @@ inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
     V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    if (ev > 0) fr(v);
+    fr(v, ev);
     fv(thread, v);
   }
 }
@@ -249,7 +250,7 @@ inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>
     if (!xt.hasVertex(v) || !fa(v)) continue;
     int  t = omp_get_thread_num();
     V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    if (ev > 0) fr(v);
+    fr(v, ev);
     fv(threads[t], v);
   }
 }
