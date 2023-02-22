@@ -42,14 +42,13 @@ enum NormFunction {
 template <class V>
 struct PagerankOptions {
   int repeat;
-  V   frontierTolerance;
   int toleranceNorm;
   V   tolerance;
   V   damping;
   int maxIterations;
 
-  PagerankOptions(int repeat=1, V frontierTolerance=1e-10, int toleranceNorm=LI_NORM, V tolerance=1e-10, V damping=0.85, int maxIterations=500) :
-  repeat(repeat), frontierTolerance(frontierTolerance), toleranceNorm(toleranceNorm), tolerance(tolerance), damping(damping), maxIterations(maxIterations) {}
+  PagerankOptions(int repeat=1, int toleranceNorm=LI_NORM, V tolerance=1e-10, V damping=0.85, int maxIterations=500) :
+  repeat(repeat), toleranceNorm(toleranceNorm), tolerance(tolerance), damping(damping), maxIterations(maxIterations) {}
 };
 
 

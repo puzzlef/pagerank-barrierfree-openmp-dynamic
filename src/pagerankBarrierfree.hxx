@@ -316,48 +316,14 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, cons
  * @param fv per vertex processing (thread, vertex)
  * @returns pagerank result
  */
-template <bool ASYNC=false, bool DEAD=false, bool SCALED=false, class FLAG=char, class G, class H, class K, class V, class FV>
+template <bool ASYNC=false, bool DEAD=false, class FLAG=char, class G, class H, class K, class V, class FV>
 inline PagerankResult<V> pagerankBarrierfreeDynamicFrontierOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
-  V D = o.frontierTolerance;
+  V D = 0.01 * o.tolerance;  // see adjust-tolerance
   if (xt.empty()) return {};
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [&](K u, V eu) { if ((SCALED && eu>D/y.degree(u)) || (!SCALED && eu>D)) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
-    auto fp = [&]()    { pagerankBarrierfreeAffectedFrontierOmpW(vaff, x, y, deletions, insertions); };
-    return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
-  });
-}
-#endif
-
-
-
-
-// CONTRACTING FRONTIER-BASED DYNAMIC PAGERANK
-// -------------------------------------------
-
-#ifdef OPENMP
-/**
- * Find the rank of each vertex in a dynamic graph.
- * @param x original graph
- * @param xt transpose of original graph
- * @param y updated graph
- * @param yt transpose of updated graph
- * @param deletions edge deletions in batch update
- * @param insertions edge insertions in batch update
- * @param q initial ranks
- * @param o pagerank options
- * @param fv per vertex processing (thread, vertex)
- * @returns pagerank result
- */
-template <bool ASYNC=false, bool DEAD=false, bool SCALED=false, class FLAG=char, class G, class H, class K, class V, class FV>
-inline PagerankResult<V> pagerankBarrierfreeDynamicCfrontierOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
-  V D = o.frontierTolerance;
-  if (xt.empty()) return {};
-  vector<FLAG> vaff(max(x.span(), y.span()));
-  return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
-    auto fa = [&](K u) { FLAG f = vaff[u]; vaff[u] = FLAG(); return f==FLAG(1); };
-    auto fr = [&](K u, V eu) { if ((SCALED && eu>D/y.degree(u)) || (!SCALED && eu>D)) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
+    auto fr = [&](K u, V eu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
     auto fp = [&]()    { pagerankBarrierfreeAffectedFrontierOmpW(vaff, x, y, deletions, insertions); };
     return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
   });

@@ -25,7 +25,7 @@ using namespace std;
 #define REPEAT_BATCH 5
 #endif
 #ifndef REPEAT_METHOD
-#define REPEAT_METHOD 5
+#define REPEAT_METHOD 1
 #endif
 
 
@@ -73,6 +73,7 @@ inline auto removeRandomEdges(G& a, R& rnd, size_t batchSize, size_t i, size_t n
 
 template <class G, class R, class F>
 inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
+  auto fl = [](auto u) { return true; };
   size_t d = BATCH_DELETIONS_BEGIN;
   size_t i = BATCH_INSERTIONS_BEGIN;
   while (true) {
@@ -80,6 +81,7 @@ inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
       auto y  = duplicate(x);
       auto deletions  = removeRandomEdges(y, rnd, d, 1, x.span()-1);
       auto insertions = addRandomEdges   (y, rnd, i, 1, x.span()-1);
+      selfLoopOmpU(y, None(), fl);
       auto yt = transposeWithDegreeOmp(y);
       fn(y, yt, deletions, insertions);
     }
@@ -94,13 +96,15 @@ inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
 
 template <class G, class R, class F>
 inline void runRelativeBatches(const G& x, R& rnd, F fn) {
+  auto fl = [](auto u) { return true; };
   double d = BATCH_DELETIONS_BEGIN;
   double i = BATCH_INSERTIONS_BEGIN;
   while (true) {
     for (int r=0; r<REPEAT_BATCH; ++r) {
       auto y  = duplicate(x);
-      auto deletions  = removeRandomEdges(y, rnd, size_t(d * x.size()), 1, x.span()-1);
-      auto insertions = addRandomEdges   (y, rnd, size_t(i * x.size()), 1, x.span()-1);
+      auto deletions  = removeRandomEdges(y, rnd, size_t(d * x.size() + 0.5), 1, x.span()-1);
+      auto insertions = addRandomEdges   (y, rnd, size_t(i * x.size() + 0.5), 1, x.span()-1);
+      selfLoopOmpU(y, None(), fl);
       auto yt = transposeWithDegreeOmp(y);
       fn(y, yt, deletions, insertions);
     }
@@ -178,49 +182,37 @@ void runExperiment(const G& x, const H& xt) {
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
-    vector<bool> vaff(max(x.span(), y.span()));
-    pagerankAffectedTraversalW(vaff, x, y, deletions, insertions);
-    size_t affectedCount = countIf(vaff, [](bool v) { return v==true; });
     runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
       // Follow a specific result logging format, which can be easily parsed later.
-      auto flog  = [&](const auto& ans, const auto& ref, const char *technique, int tfactor=1) {
-        auto ear = pagerankBasicOmp(yt, &ans.ranks, {1}, fnop);
+      auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {
         auto err = liNormOmp(ans.ranks, ref.ranks);
         LOG(
-          "{-%.3e/+%.3e batch, %.3e aff, %03d/%03d threads %04dms @ %.2e %s failure} -> "
-          "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d early, %03d crashed] %s<tolerance_factor=%03d>\n",
-          double(deletions.size()), double(insertions.size()), double(affectedCount),
+          "{-%.3e/+%.3e batch, %03d/%03d threads %04dms @ %.2e %s failure} -> "
+          "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d crashed] %s\n",
+          double(deletions.size()), double(insertions.size()),
           failureThreads, MAX_THREADS, failureDuration, failureProbability, FAILURE_TYPE,
-          ans.correctedTime, ans.time, ans.iterations, err, ear.iterations-1, ans.crashedCount, technique, tfactor
+          ans.correctedTime, ans.time, ans.iterations, err, ans.crashedCount, technique
         );
       };
       auto r1 = pagerankBasicOmp(yt, init, {1}, fnop);
       // Find multi-threaded OpenMP-based Static PageRank (synchronous, no dead ends).
-      // auto a1 = pagerankBasicOmp(yt, init, {repeat}, fv);
-      // flog(a1, r1, "pagerankBasicOmp");
+      auto a1 = pagerankBasicOmp(yt, init, {repeat}, fv);
+      flog(a1, r1, "pagerankBasicOmp");
       // Find multi-threaded OpenMP-based Naive-dynamic PageRank (synchronous, no dead ends).
       auto a2 = pagerankBasicOmp(yt, &a0.ranks, {repeat}, fv);
       flog(a2, r1, "pagerankBasicNaiveDynamicOmp");
       // Find multi-threaded OpenMP-based Frontier-based Dynamic PageRank (synchronous, no dead ends).
-      for (int T=1; T<256; T*=2) {
-        auto a4 = pagerankBasicDynamicFrontierOmp<false, false, false>(x, xt, y, yt, deletions, insertions, &a0.ranks, {repeat, 1e-10/T}, fv);
-        flog(a4, r1, "pagerankBasicDynamicFrontierOmp", T);
-        auto a5 = pagerankBasicDynamicFrontierOmp<false, false, true> (x, xt, y, yt, deletions, insertions, &a0.ranks, {repeat, 1e-10/T}, fv);
-        flog(a5, r1, "pagerankBasicDynamicFrontierOmpScaled", T);
-      }
+      auto a4 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &a0.ranks, {repeat}, fv);
+      flog(a4, r1, "pagerankBasicDynamicFrontierOmp");
       // Find multi-threaded OpenMP-based Static Barrier-free PageRank (asynchronous, no dead ends).
-      // auto b1 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
-      // flog(b1, r1, "pagerankBarrierfreeOmp");
+      auto b1 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
+      flog(b1, r1, "pagerankBarrierfreeOmp");
       // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free PageRank (asynchronous, no dead ends).
       auto b2 = pagerankBarrierfreeOmp<true>(yt, &b0.ranks, {repeat}, fv);
       flog(b2, r1, "pagerankBarrierfreeNaiveDynamicOmp");
       // Find multi-threaded OpenMP-based Frontier-based Dynamic Barrier-free PageRank (asynchronous, no dead ends).
-      for (int T=1; T<256; T*=2) {
-        auto b4 = pagerankBarrierfreeDynamicFrontierOmp<true, false, false> (x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat, 1e-10/T}, fv);
-        flog(b4, r1, "pagerankBarrierfreeDynamicFrontierOmp", T);
-        auto b5 = pagerankBarrierfreeDynamicFrontierOmp<true, false, true>  (x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat, 1e-10/T}, fv);
-        flog(b5, r1, "pagerankBarrierfreeDynamicFrontierOmpScaled", T);
-      }
+      auto b4 = pagerankBarrierfreeDynamicFrontierOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
+      flog(b4, r1, "pagerankBarrierfreeDynamicFrontierOmp");
     });
   });
 }

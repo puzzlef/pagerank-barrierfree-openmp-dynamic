@@ -18,8 +18,8 @@ if [[ "$1" == "" || "$1" == "1" ]]; then
 fi
 
 # For uniform failure
-export BATCH_INSERTIONS_BEGIN="0.001"
-export BATCH_INSERTIONS_END="0.001"
+export BATCH_INSERTIONS_BEGIN="0.0001"
+export BATCH_INSERTIONS_END="0.0001"
 export FAILURE_THREADS_BEGIN="$MAX_THREADS"
 export FAILURE_THREADS_END="$MAX_THREADS"
 
