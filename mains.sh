@@ -17,23 +17,31 @@ if [[ "$1" == "" || "$1" == "1" ]]; then
   ./"$src/main.sh"
 fi
 
-# For uniform failure
+# 2. With strong scaling (fixed batch size)
 export BATCH_DELETIONS_BEGIN="0.00005"
 export BATCH_DELETIONS_END="0.00005"
 export BATCH_INSERTIONS_BEGIN="0.00005"
 export BATCH_INSERTIONS_END="0.00005"
+export NUM_THREADS_BEGIN="1"
+export NUM_THREADS_END="$MAX_THREADS"
+export NUM_THREADS_STEP="*=2"
+if [[ "$1" == "" || "$1" == "2" ]]; then
+  ./"$src/main.sh" "--strong-scaling"
+fi
+
+# For uniform failure
 export FAILURE_THREADS_BEGIN="$MAX_THREADS"
 export FAILURE_THREADS_END="$MAX_THREADS"
 
-# 2. With uniform sleep failure
+# 3. With uniform sleep failure
 export FAILURE_TYPE="sleep"
-if [[ "$1" == "" || "$1" == "2" ]]; then
+if [[ "$1" == "" || "$1" == "3" ]]; then
   ./"$src/main.sh" "--uniform-sleep"
 fi
 
-# 3. With uniform crash failure
+# 4. With uniform crash failure
 export FAILURE_TYPE="crash"
-if [[ "$1" == "" || "$1" == "3" ]]; then
+if [[ "$1" == "" || "$1" == "4" ]]; then
   ./"$src/main.sh" "--uniform-crash"
 fi
 
@@ -45,15 +53,15 @@ export FAILURE_PROBABILITY_END="0.000001"
 export FAILURE_THREADS_BEGIN="0"
 export FAILURE_THREADS_END="$MAX_THREADS"
 
-# 4. With non-uniform sleep failure
+# 5. With non-uniform sleep failure
 export FAILURE_TYPE="sleep"
-if [[ "$1" == "" || "$1" == "4" ]]; then
+if [[ "$1" == "" || "$1" == "5" ]]; then
   ./"$src/main.sh" "--nonuniform-sleep"
 fi
 
-# 5. With non-uniform crash failure
+# 6. With non-uniform crash failure
 export FAILURE_TYPE="crash"
-if [[ "$1" == "" || "$1" == "5" ]]; then
+if [[ "$1" == "" || "$1" == "6" ]]; then
   ./"$src/main.sh" "--nonuniform-crash"
 fi
 
