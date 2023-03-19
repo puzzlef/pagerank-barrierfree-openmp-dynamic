@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-src="pagerank-barrierfree-openmp-static-vs-dynamic"
+src="pagerank-barrierfree-openmp-dynamic"
 ulimit -s unlimited
 
 # Download program
@@ -66,5 +66,4 @@ if [[ "$1" == "" || "$1" == "6" ]]; then
 fi
 
 # Signal completion
-event="puzzlef_${src//-/_}"
-curl -X POST https://maker.ifttt.com/trigger/${event}/json/with/key/${IFTTT_KEY}
+curl -X POST "https://maker.ifttt.com/trigger/puzzlef/with/key/${IFTTT_KEY}?value1=$src"
