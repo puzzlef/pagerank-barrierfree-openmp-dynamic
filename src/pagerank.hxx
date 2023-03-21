@@ -364,12 +364,12 @@ inline void pagerankAffectedTraversalOmpW(vector<B>& vis, const G& x, const G& y
  * @param y updated graph
  * @param ft is vertex affected? (u)
  */
-template <class B, class G, class FT>
+template <int CHUNK=1, class B, class G, class FT>
 inline void pagerankAffectedFrontierW(vector<B>& vis, const G& x, const G& y, FT ft) {
   y.forEachVertexKey([&](auto u) {
     if (!ft(u)) return;
-    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
-    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    x.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
+    y.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
   });
 }
 
@@ -382,29 +382,29 @@ inline void pagerankAffectedFrontierW(vector<B>& vis, const G& x, const G& y, FT
  * @param deletions edge deletions in batch update
  * @param insertions edge insertions in batch update
  */
-template <class B, class G, class K>
+template <int CHUNK=1, class B, class G, class K>
 inline void pagerankAffectedFrontierW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   for (const auto& [u, v] : deletions)
-    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    x.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
   for (const auto& [u, v] : insertions)
-    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    y.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
 }
 
 
 #ifdef OPENMP
-template <class B, class G, class K>
+template <int CHUNK=1, class B, class G, class K>
 inline void pagerankAffectedFrontierOmpW(vector<B>& vis, const G& x, const G& y, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions) {
   size_t D = deletions.size();
   size_t I = insertions.size();
   #pragma omp parallel for schedule(auto)
   for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
-    x.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    x.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
   }
   #pragma omp parallel for schedule(auto)
   for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
-    y.forEachEdgeKey(u, [&](auto v) { vis[v] = B(1); });
+    y.forEachEdgeKey(u, [&](auto v) { vis[v/CHUNK] = B(1); });
   }
 }
 #endif
