@@ -64,124 +64,22 @@ The input data used for this experiment is available from the
 <br>
 
 
-### In the Absence of Faults
+### With Chunked mark
 
-In this experiment, we compare the performance of *Static*, *Naive-dynamic*, and
-*Dynamic Frontier* based *With-barrier* and *Barrier-free* PageRank. From the
-results, we observe that our proposed *Dynamic Frontier* based *Barrier-free*
-PageRank is `6.5x`, `5.8x`, `4.1x`, `2.4x`, and `1.4x` faster than the
-*Naive-dynamic* approach for batch fractions of `10^-8` to `10^-4`. However,
-beyond a batch size of `10^-3 |E|` (`1,000,000` edges for a billion-edge graph),
-the performance drops below *Naive-dynamic*, and *Static* approaches (for both
-*With-barrier* and *Barrier-free* PageRank). Such large batch sizes result in
-*nearly* all of the vertices getting marked as *affected*, and hence the
-performance drops. See [charts][charts1] included below, generated from
-[sheets][sheets1].
+With [Chunked mark], we consider vertices to be grouped by IDs of size `2^n`,
+and mark entire chunk as affected instead of marking just a single vertex. This
+reduces the memory occupied by the affected flag vector, but has the side effect
+of marking additional (unaffected) vertices are affected. It is a very simple
+optimization, and we apply it to *Dynamic Frontier* based *With-barrier* and
+*Barrier-free* PageRank. Results indicate that this does not offer *any*
+improvement. Output is listed in [gist], and results are saved in [charts]
+generated from [sheets].
 
-[![](https://i.imgur.com/KpWMej4.png)][sheetp1]
-
-[charts1]: https://imgur.com/a/hvq7z6q
-[sheets1]: https://docs.google.com/spreadsheets/d/1Gjzv9drtd_zqOYYD_PqvSde_mcmQcnAf_CFg3FHbNwY/edit?usp=sharing
-[sheetp1]: https://docs.google.com/spreadsheets/d/e/2PACX-1vSaT6GPh5wpb6ytZV9QKK1k3vjqq_x1rpuMTPd2k8b_GsNaVMKPXii4ATIHTU9BOqD8mxYV-i2RW143/pubhtml
-
-<br>
-
-
-### Strong Scaling
-
-In this experiment, we study the strong-scaling behavior of *Dynamic Frontier*
-based *With-barrier* and *Dynamic Frontier* based *Barrier-free* PageRank on
-batch updates of a fixed size of `10^-4 |E|` in the absence of faults. Here, we
-measure the speedup of each algorithm with an increasing number of threads from
-`1` to `32` in multiples of `2` with respect to a single-threaded execution of
-the algorithm. We additionally compare *Static* and *Naive-dynamic* versions of
-*With-barrier* and *Barrier-free* PageRank.
-
-From the results, we observe that all algorithms offer similar scaling
-performance. When using `32` threads, *Dynamic Frontier* based *Barrier-free*
-PageRank offers a average speedup of `15\times`, *Naive-dynamic* and *Static*
-*Barrier-free* PageRank offer a average speedup of `14\times` and approaches
-based on *With-barrier* PageRank offer an average speedup of `13.4\times`. This
-demonstrates that *Dynamic Frontier* based *Barrier-free* PageRank offers good
-scaling performance, that continues to be in line with that provided by the
-PageRank algorithm in general. See [charts][charts6] included below, generated
-from [sheets][sheets6].
-
-[![](https://i.imgur.com/NkSxOJF.png)][sheetp6]
-[![](https://i.imgur.com/JfAbMLR.png)][sheetp6]
-[![](https://i.imgur.com/KVXOnpV.png)][sheetp6]
-
-[charts6]: https://imgur.com/a/B8gwsnS
-[sheets6]: https://docs.google.com/spreadsheets/d/1hgRbPQXj_O__m5nBcClo5IkJTM5vztklcCMSB6zU4yA/edit?usp=sharing
-[sheetp6]: https://docs.google.com/spreadsheets/d/e/2PACX-1vS270_kwg8bQoapizI1vBRQzdD9eEiyDBaYKzz1tQzTo3XruQuRpDx_lT553pnt9GlScnGlC-ceSdi9/pubhtml
-
-<br>
-
-
-### With Uniform Thread delays
-
-In this experiment, we compare the performance of *Dynamic Frontier* based
-*With-barrier* and *Barrier-free* PageRank in the presence of random thread
-delays that are uniformly distributed among all threads. From the results, we
-observe that *Dynamic Frontier* based *With-barrier* PageRank is significantly
-affected by an increasing delay probability. In contrast, *Dynamic Frontier*
-based *Barrier-free* PageRank is relatively less affected. At a delay
-probability of `10^-6`, *Dynamic Frontier* based *Barrier-free* PageRank
-continues to be on average `1.5x`, `1.8x`, and `2.2x` faster on delay durations
-of `50`, `100`, and `200` ms, respectively. See [charts][charts2] included
-below, generated from [sheets][sheets2].
-
-[![](https://i.imgur.com/MkvMiXK.png)][sheetp2]
-
-[charts2]: https://imgur.com/a/GMu3xSw
-[sheets2]: https://docs.google.com/spreadsheets/d/1YtzLia-sNlK9mJCtAnIHV5yG_sV1zSZUUloqQaHa9YQ/edit?usp=sharing
-[sheetp2]: https://docs.google.com/spreadsheets/d/e/2PACX-1vT887D9hyBJRNYL9sW8ZgavC7pLjEoFde0KRjB4J7x_92wN3caMwgyGGrzvYjE6FtzBycBKVeSnziS3/pubhtml
-
-<br>
-
-
-### With Non-uniform Thread crashes
-
-In this experiment, we measure the performance of *Dynamic Frontier* based
-*Barrier-free PageRank* in the presence of random thread crashes that are
-non-uniformly distributed (i.e., only the first `T` threads are affected by
-random thread crashes) with a high probability of `10^-6`. From the results, we
-observe that the performance of *Dynamic Frontier* based *Barrier-free* PageRank
-drops at an exponential rate with an increase in the number of crashed threads.
-When `28` out of `32` threads have crashed, it is, on average, `4.5x` slower and
-fails to complete only when all `32` threads crash. See [charts][charts5]
-included below, generated from [sheets][sheets5].
-
-[![](https://i.imgur.com/vcr3OTE.png)][sheetp5]
-
-[charts5]: https://imgur.com/a/vINN31x
-[sheets5]: https://docs.google.com/spreadsheets/d/1h2qMsFpu81fDzIcLrNvDJkmjfjum1otZ6Oyn39CtvEI/edit?usp=sharing
-[sheetp5]: https://docs.google.com/spreadsheets/d/e/2PACX-1vTS1-_CFClCa9Ouvl080QnJ8dcLgyA_RlhdOMj-VRgwP7SwnZhk4nSBgpZArv2VctmbahTu_FfSTvM7/pubhtml
-
-<br>
-
-
-### Dynamic Contracting Frontier approach
-
-We also experiment with a [Dynamic Contracting Frontier] approach, where we
-remove vertices from the affected set once their ranks are computed. However,
-this showed a small performance drop compared to the *Dynamic Frontier*
-approach, and thus we do not discuss it any further.
-
-[Dynamic Contracting Frontier]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/approach-cfrontier
-
-<br>
-
-
-### With Check and mark
-
-With [Check and mark], we mark a vertex as affected only if its not already
-marked, i.e., we check before marking. It is a very simple optimization, and we
-apply it to *Dynamic Frontier* based *With-barrier* and *Barrier-free* PageRank.
-Results indicate that this offer a small performance improvement (for large
-batch updates).
-
-[Check and mark]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/with-check-and-mark
+[Chunked mark]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/with-chunked-mark
+[gist]: https://gist.github.com/wolfram77/831a32c3e52308e8f91d7544a0ffe047
+[charts]: https://imgur.com/a/eqohpIy
+[sheets]: https://docs.google.com/spreadsheets/d/1Yzxzx-Ba5SlLr9x_xEdCrcKV2w31ArIu-iVX6Z48x1E/edit?usp=sharing
+[sheetp]: https://docs.google.com/spreadsheets/d/e/2PACX-1vS8ENWDXYx_yjMA9UgN8YbcSGYlCa5vt5b4uB-CE0oe67OyMtRaPa6_Dkstc_kURsvflqnxg136q48t/pubhtml
 
 <br>
 <br>
