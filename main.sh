@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-src="pagerank-barrierfree-openmp-static-vs-dynamic"
+src="pagerank-barrierfree-openmp-dynamic"
 out="$HOME/Logs/$src$1.log"
 ulimit -s unlimited
 printf "" > "$out"

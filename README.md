@@ -163,10 +163,40 @@ included below, generated from [sheets][sheets5].
 
 ### Dynamic Contracting Frontier approach
 
-We also experiment with a *Dynamic Contracting Frontier* approach, where we
+We also experiment with a [Dynamic Contracting Frontier] approach, where we
 remove vertices from the affected set once their ranks are computed. However,
 this showed a small performance drop compared to the *Dynamic Frontier*
 approach, and thus we do not discuss it any further.
+
+[Dynamic Contracting Frontier]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/approach-cfrontier
+
+<br>
+
+
+### With Check and mark
+
+With [Check and mark], we mark a vertex as affected only if its not already
+marked, i.e., we check before marking. It is a very simple optimization, and we
+apply it to *Dynamic Frontier* based *With-barrier* and *Barrier-free* PageRank.
+Results indicate that this offer a small performance improvement (for large
+batch updates).
+
+[Check and mark]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/with-check-and-mark
+
+<br>
+
+
+### With Chunked mark
+
+With [Chunked mark], we consider vertices to be grouped by IDs of size `2^n`,
+and mark entire chunk as affected instead of marking just a single vertex. This
+reduces the memory occupied by the affected flag vector, but has the side effect
+of marking additional (unaffected) vertices are affected. It is a very simple
+optimization, and we apply it to *Dynamic Frontier* based *With-barrier* and
+*Barrier-free* PageRank. Results indicate that this does not offer *any*
+improvement.
+
+[Chunked mark]: https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/with-chunked-mark
 
 <br>
 <br>
