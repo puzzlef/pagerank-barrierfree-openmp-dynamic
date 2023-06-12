@@ -26,8 +26,8 @@ fi
 # 2. With strong scaling (fixed batch size)
 export BATCH_DELETIONS_BEGIN="0.00005"
 export BATCH_DELETIONS_END="0.00005"
-export BATCH_INSERTIONS_BEGIN="0.00005"
-export BATCH_INSERTIONS_END="0.00005"
+export BATCH_INSERTIONS_BEGIN="0"
+export BATCH_INSERTIONS_END="0"
 export NUM_THREADS_BEGIN="1"
 export NUM_THREADS_END="$MAX_THREADS"
 export NUM_THREADS_STEP="*=2"
@@ -52,6 +52,8 @@ if [[ "$1" == "" || "$1" == "4" ]]; then
 fi
 
 # For non-uniform failure
+export NUM_THREADS_BEGIN="$MAX_THREADS"
+export NUM_THREADS_END="$MAX_THREADS"
 export FAILURE_DURATION_BEGIN="100"
 export FAILURE_DURATION_END="100"
 export FAILURE_PROBABILITY_BEGIN="0.000001"

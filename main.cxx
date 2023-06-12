@@ -164,6 +164,11 @@ inline void runCrashFailures(const G& x, F fn) {
         if (thread->id < t && dis(thread->rnd) < cp) thread->crashed = true;
       };
       fn(0, p, t, fv);
+      auto  fw = [&](ThreadInfo *thread, auto v) {
+        uniform_real_distribution<double> dis(0.0, 1.0);
+        if ((MAX_THREADS-1 - thread->id) < t && dis(thread->rnd) < cp) thread->crashed = true;
+      };
+      fn(0, -p, t, fv);
     }
   }
 }
