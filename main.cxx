@@ -83,7 +83,7 @@ inline void runAbsoluteBatches(const G& x, R& rnd, F fn) {
       auto insertions = addRandomEdges   (y, rnd, i, 1, x.span()-1);
       selfLoopOmpU(y, None(), fl);
       auto yt = transposeWithDegreeOmp(y);
-      fn(y, yt, deletions, insertions);
+      fn(y, yt, d, deletions, i, insertions);
     }
     if (d>=BATCH_DELETIONS_END && i>=BATCH_INSERTIONS_END) break;
     d BATCH_DELETIONS_STEP;
@@ -106,7 +106,7 @@ inline void runRelativeBatches(const G& x, R& rnd, F fn) {
       auto insertions = addRandomEdges   (y, rnd, size_t(i * x.size() + 0.5), 1, x.span()-1);
       selfLoopOmpU(y, None(), fl);
       auto yt = transposeWithDegreeOmp(y);
-      fn(y, yt, deletions, insertions);
+      fn(y, yt, d, deletions, i, insertions);
     }
     if (d>=BATCH_DELETIONS_END && i>=BATCH_INSERTIONS_END) break;
     d BATCH_DELETIONS_STEP;
@@ -196,16 +196,16 @@ void runExperiment(const G& x, const H& xt) {
   auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
   auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
-  runBatches(x, rnd, [&](const auto& y, const auto& yt, const auto& deletions, const auto& insertions) {
+  runBatches(x, rnd, [&](const auto& y, const auto& yt, auto delf, const auto& deletions, auto insf, const auto& insertions) {
     runThreads([&](int numThreads) {
       runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
         // Follow a specific result logging format, which can be easily parsed later.
         auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {
           auto err = liNormOmp(ans.ranks, ref.ranks);
           LOG(
-            "{-%.3e/+%.3e batch, %03d/%03d threads %04dms @ %.2e %s failure} -> "
+            "{-%.3e/+%.3e batchf, %03d/%03d threads %04dms @ %.2e %s failure} -> "
             "{%09.1f/%09.1fms, %03d iter, %.2e err, %03d crashed] %s\n",
-            double(deletions.size()), double(insertions.size()),
+            delf, insf,
             failureThreads, numThreads, failureDuration, failureProbability, FAILURE_TYPE,
             ans.correctedTime, ans.time, ans.iterations, err, ans.crashedCount, technique
           );
