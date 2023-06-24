@@ -193,8 +193,7 @@ void runExperiment(const G& x, const H& xt) {
   int repeat = REPEAT_METHOD;
   // Get ranks of vertices on original graph (static).
   auto fnop = [&](ThreadInfo *thread, auto v) {};
-  auto a0   = pagerankBasicOmp(xt, init, {1}, fnop);
-  auto b0   = pagerankBarrierfreeOmp<true>(xt, init, {1}, fnop);
+  auto r9   = pagerankBasicOmp(xt, init, {1, LI_NORM, 1e-100}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, const auto& yt, auto delf, const auto& deletions, auto insf, const auto& insertions) {
     runThreads([&](int numThreads) {
@@ -210,37 +209,29 @@ void runExperiment(const G& x, const H& xt) {
             ans.correctedTime, ans.time, ans.iterations, err, ans.crashedCount, technique
           );
         };
-        auto r1 = pagerankBasicOmp(yt, init, {1}, fnop);
+        auto r0 = pagerankBasicOmp(yt, init, {1, LI_NORM, 1e-100}, fnop);
         // Find multi-threaded OpenMP-based Static PageRank (synchronous, no dead ends).
-        auto a1 = pagerankBasicOmp(yt, init, {repeat}, fv);
-        flog(a1, r1, "pagerankBasicOmpForward");
         auto a9 = pagerankBasicOmp(xt, init, {repeat}, fv);
-        flog(a9, a0, "pagerankBasicOmpReverse");
+        flog(a9, r9, "pagerankBasicOmp");
         // Find multi-threaded OpenMP-based Naive-dynamic PageRank (synchronous, no dead ends).
-        auto a2 = pagerankBasicOmp(yt, &a0.ranks, {repeat}, fv);
-        flog(a2, r1, "pagerankBasicNaiveDynamicOmpForward");
-        auto a8 = pagerankBasicOmp(xt, &a2.ranks, {repeat}, fv);
-        flog(a8, a0, "pagerankBasicNaiveDynamicOmpReverse");
+        auto a1 = pagerankBasicOmp(yt, &r9.ranks, {repeat}, fv);
+        auto a8 = pagerankBasicOmp(xt, &a1.ranks, {repeat}, fv);
+        flog(a8, r9, "pagerankBasicNaiveDynamic");
         // Find multi-threaded OpenMP-based Frontier-based Dynamic PageRank (synchronous, no dead ends).
-        auto a3 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &a0.ranks, {repeat}, fv);
-        flog(a3, r1, "pagerankBasicDynamicFrontierOmpForward");
-        auto a7 = pagerankBasicDynamicFrontierOmp(y, yt, x, xt, insertions, deletions, &a3.ranks, {repeat}, fv);
-        flog(a7, a0, "pagerankBasicDynamicFrontierOmpReverse");
+        auto a2 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &r9.ranks, {repeat}, fv);
+        auto a7 = pagerankBasicDynamicFrontierOmp(y, yt, x, xt, insertions, deletions, &a2.ranks, {repeat}, fv);
+        flog(a7, r9, "pagerankBasicDynamicFrontierOmp");
         // Find multi-threaded OpenMP-based Static Barrier-free PageRank (asynchronous, no dead ends).
-        auto b1 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
-        flog(b1, r1, "pagerankBarrierfreeOmpForward");
         auto b9 = pagerankBarrierfreeOmp<true>(xt, init, {repeat}, fv);
-        flog(b9, b0, "pagerankBarrierfreeOmpReverse");
+        flog(b9, r9, "pagerankBarrierfreeOmp");
         // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free PageRank (asynchronous, no dead ends).
-        auto b2 = pagerankBarrierfreeOmp<true>(yt, &b0.ranks, {repeat}, fv);
-        flog(b2, r1, "pagerankBarrierfreeNaiveDynamicOmpForward");
-        auto b8 = pagerankBarrierfreeOmp<true>(xt, &b2.ranks, {repeat}, fv);
-        flog(b8, b0, "pagerankBarrierfreeNaiveDynamicOmpReverse");
+        auto b1 = pagerankBarrierfreeOmp<true>(yt, &r9.ranks, {repeat}, fv);
+        auto b8 = pagerankBarrierfreeOmp<true>(xt, &b1.ranks, {repeat}, fv);
+        flog(b8, r9, "pagerankBarrierfreeNaiveDynamicOmp");
         // Find multi-threaded OpenMP-based Frontier-based Dynamic Barrier-free PageRank (asynchronous, no dead ends).
-        auto b3 = pagerankBarrierfreeDynamicFrontierOmp<true>(x, xt, y, yt, deletions, insertions, &b0.ranks, {repeat}, fv);
-        flog(b3, r1, "pagerankBarrierfreeDynamicFrontierOmpForward");
-        auto b7 = pagerankBarrierfreeDynamicFrontierOmp<true>(y, yt, x, xt, insertions, deletions, &b3.ranks, {repeat}, fv);
-        flog(b7, b0, "pagerankBarrierfreeDynamicFrontierOmpReverse");
+        auto b2 = pagerankBarrierfreeDynamicFrontierOmp<true>(x, xt, y, yt, deletions, insertions, &r9.ranks, {repeat}, fv);
+        auto b7 = pagerankBarrierfreeDynamicFrontierOmp<true>(y, yt, x, xt, insertions, deletions, &b2.ranks, {repeat}, fv);
+        flog(b7, r9, "pagerankBarrierfreeDynamicFrontierOmp");
       });
     });
   });

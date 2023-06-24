@@ -223,4 +223,3 @@ improvement.
 
 [![](https://img.youtube.com/vi/OP-uxSvHUn8/maxresdefault.jpg)](https://www.youtube.com/watch?v=OP-uxSvHUn8)<br>
 [![ORG](https://img.shields.io/badge/org-puzzlef-green?logo=Org)](https://puzzlef.github.io)
-[![DOI](https://zenodo.org/badge/532937318.svg)](https://zenodo.org/badge/latestdoi/532937318)
