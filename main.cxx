@@ -216,7 +216,7 @@ void runExperiment(const G& x, const H& xt) {
         // Find multi-threaded OpenMP-based Naive-dynamic PageRank (synchronous, no dead ends).
         auto a1 = pagerankBasicOmp(yt, &r9.ranks, {repeat}, fv);
         auto a8 = pagerankBasicOmp(xt, &a1.ranks, {repeat}, fv);
-        flog(a8, r9, "pagerankBasicNaiveDynamic");
+        flog(a8, r9, "pagerankBasicNaiveDynamicOmp");
         // Find multi-threaded OpenMP-based Frontier-based Dynamic PageRank (synchronous, no dead ends).
         auto a2 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &r9.ranks, {repeat}, fv);
         auto a7 = pagerankBasicDynamicFrontierOmp(y, yt, x, xt, insertions, deletions, &a2.ranks, {repeat}, fv);
