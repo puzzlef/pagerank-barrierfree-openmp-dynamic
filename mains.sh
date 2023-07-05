@@ -13,21 +13,15 @@ export DOWNLOAD="0"
 
 # 1. Static vs Dynamic Barrier-free PageRank
 export MAX_THREADS="32"
-export BATCH_DELETIONS_BEGIN="0.00000001"
-export BATCH_DELETIONS_END="0.1"
-export BATCH_DELETIONS_STEP="*=10"
-export BATCH_INSERTIONS_BEGIN="0"
-export BATCH_INSERTIONS_END="0"
-export BATCH_INSERTIONS_STEP="+=10"
 if [[ "$1" == "" || "$1" == "1" ]]; then
   ./"$src/main.sh"
 fi
 
 # 2. With strong scaling (fixed batch size)
-export BATCH_DELETIONS_BEGIN="0.0001"
-export BATCH_DELETIONS_END="0.0001"
-export BATCH_INSERTIONS_BEGIN="0"
-export BATCH_INSERTIONS_END="0"
+export BATCH_DELETIONS_BEGIN="0.00005"
+export BATCH_DELETIONS_END="0.00005"
+export BATCH_INSERTIONS_BEGIN="0.00005"
+export BATCH_INSERTIONS_END="0.00005"
 export NUM_THREADS_BEGIN="1"
 export NUM_THREADS_END="$MAX_THREADS"
 export NUM_THREADS_STEP="*=2"
