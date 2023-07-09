@@ -186,14 +186,18 @@ inline PagerankResult<V> pagerankBasicDynamicFrontierSeq(const G& x, const H& xt
 
 
 #ifdef OPENMP
-template <bool ASYNC=false, bool DEAD=false, class FLAG=char, class G, class H, class K, class V, class FV>
+template <int TOLFRAC=100, int TOLMODE=0, bool CHECK=false, bool ASYNC=false, bool DEAD=false, class FLAG=char, class G, class H, class K, class V, class FV>
 inline PagerankResult<V> pagerankBasicDynamicFrontierOmp(const G& x, const H& xt, const G& y, const H& yt, const vector<tuple<K, K>>& deletions, const vector<tuple<K, K>>& insertions, const vector<V> *q, const PagerankOptions<V>& o, FV fv) {
-  V D = 0.01 * o.tolerance;  // see adjust-tolerance
+  V D = TOLMODE<=1? ((TOLMODE==0? 1.0 : 0.1)/TOLFRAC) * o.tolerance : 0.001/TOLFRAC;  // see adjust-tolerance
   if (xt.empty()) return {};
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [&](K u, V eu, V pu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
+    auto fr = [&](K u, V eu, V pu) {
+      if      (TOLMODE==0) { if (eu>D)             y.forEachEdgeKey(u, [&](K v) { if (!CHECK || !vaff[v]) vaff[v] = FLAG(1); }); }
+      else if (TOLMODE==1) { if (eu>D*y.degree(u)) y.forEachEdgeKey(u, [&](K v) { if (!CHECK || !vaff[v]) vaff[v] = FLAG(1); }); }
+      else if (TOLMODE==2) { if (pu>D)             y.forEachEdgeKey(u, [&](K v) { if (!CHECK || !vaff[v]) vaff[v] = FLAG(1); }); }
+    };
     pagerankAffectedFrontierOmpW(vaff, x, y, deletions, insertions);
     return pagerankBasicOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
