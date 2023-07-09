@@ -13,10 +13,11 @@ export DOWNLOAD="0"
 
 # 1. Static vs Dynamic Barrier-free PageRank
 export MAX_THREADS="32"
-export BATCH_DELETIONS_BEGIN="0.00005"
+export REPEAT_BATCH="2"
+export BATCH_DELETIONS_BEGIN="0.0000005"
 export BATCH_DELETIONS_END="0.0005"
 export BATCH_DELETIONS_STEP="*=10"
-export BATCH_INSERTIONS_BEGIN="0.00005"
+export BATCH_INSERTIONS_BEGIN="0.0000005"
 export BATCH_INSERTIONS_END="0.0005"
 export BATCH_INSERTIONS_STEP="*=10"
 if [[ "$1" == "" || "$1" == "1" ]]; then
