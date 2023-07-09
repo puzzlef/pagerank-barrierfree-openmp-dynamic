@@ -72,10 +72,10 @@ inline void pagerankBarrierfreeCalculateRanksOmp(vector<B>& e, vector<V>& a, con
   #pragma omp for schedule(dynamic, 2048) nowait
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
-    V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
+    auto [ev, pv] = pagerankCalculateRank(a, xt, r, v, C0, P);
     if (ev > E) { if (e[v]==1) e[v] = 0; }
     else        { if (e[v]==0) e[v] = 1; }  // LI_NORM
-    fr(v, ev);
+    fr(v, ev, pv);
     fv(thread, v);
   }
 }
@@ -256,7 +256,7 @@ inline PagerankResult<V> pagerankBarrierfreeOmp(const H& xt, const vector<V> *q,
   if  (xt.empty()) return {};
   return pagerankOmp<ASYNC, FLAG>(xt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [](K u) { return true; };
-    auto fr = [](K u, V eu) {};
+    auto fr = [](K u, V eu, V pu) {};
     auto fp = []() {};
     return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
   });
@@ -289,7 +289,7 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicTraversalOmp(const G& x, cons
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [ ](K u, V eu) {};
+    auto fr = [ ](K u, V eu, V pu) {};
     auto fp = [&]()    { pagerankBarrierfreeAffectedTraversalOmpW(vaff, x, y, deletions, insertions); };
     return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
   });
@@ -323,7 +323,7 @@ inline PagerankResult<V> pagerankBarrierfreeDynamicFrontierOmp(const G& x, const
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC, FLAG>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [&](K u, V eu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
+    auto fr = [&](K u, V eu, V pu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
     auto fp = [&]()    { pagerankBarrierfreeAffectedFrontierOmpW(vaff, x, y, deletions, insertions); };
     return pagerankBarrierfreeOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr, fp);
   });

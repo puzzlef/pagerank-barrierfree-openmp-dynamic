@@ -87,7 +87,7 @@ inline PagerankResult<V> pagerankBasicSeq(const H& xt, const vector<V> *q, const
   if  (xt.empty()) return {};
   return pagerankSeq<ASYNC>(xt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [](K u) { return true; };
-    auto fr = [](K u, V eu) {};
+    auto fr = [](K u, V eu, V pu) {};
     return pagerankBasicSeqLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
 }
@@ -100,7 +100,7 @@ inline PagerankResult<V> pagerankBasicOmp(const H& xt, const vector<V> *q, const
   if  (xt.empty()) return {};
   return pagerankOmp<ASYNC>(xt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [](K u) { return true; };
-    auto fr = [](K u, V eu) {};
+    auto fr = [](K u, V eu, V pu) {};
     return pagerankBasicOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
 }
@@ -131,7 +131,7 @@ inline PagerankResult<V> pagerankBasicDynamicTraversalSeq(const G& x, const H& x
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankSeq<ASYNC>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [ ](K u, V eu) {};
+    auto fr = [ ](K u, V eu, V pu) {};
     pagerankAffectedTraversalW(vaff, x, y, deletions, insertions);
     return pagerankBasicSeqLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
@@ -145,7 +145,7 @@ inline PagerankResult<V> pagerankBasicDynamicTraversalOmp(const G& x, const H& x
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [ ](K u, V eu) {};
+    auto fr = [ ](K u, V eu, V pu) {};
     pagerankAffectedTraversalOmpW(vaff, x, y, deletions, insertions);
     return pagerankBasicOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
@@ -178,7 +178,7 @@ inline PagerankResult<V> pagerankBasicDynamicFrontierSeq(const G& x, const H& xt
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankSeq<ASYNC>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [&](K u, V eu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
+    auto fr = [&](K u, V eu, V pu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
     pagerankAffectedFrontierW(vaff, x, y, deletions, insertions);
     return pagerankBasicSeqLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });
@@ -193,7 +193,7 @@ inline PagerankResult<V> pagerankBasicDynamicFrontierOmp(const G& x, const H& xt
   vector<FLAG> vaff(max(x.span(), y.span()));
   return pagerankOmp<ASYNC>(yt, q, o, [&](auto& e, vector<V>& a, vector<V>& r, const H& xt, V P, V E, int L, int EF, vector<ThreadInfo*>& threads) {
     auto fa = [&](K u) { return vaff[u]==FLAG(1); };
-    auto fr = [&](K u, V eu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
+    auto fr = [&](K u, V eu, V pu) { if (eu>D) y.forEachEdgeKey(u, [&](K v) { vaff[v] = FLAG(1); }); };
     pagerankAffectedFrontierOmpW(vaff, x, y, deletions, insertions);
     return pagerankBasicOmpLoop<ASYNC, DEAD>(e, a, r, xt, P, E, L, EF, threads, fv, fa, fr);
   });

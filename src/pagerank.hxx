@@ -20,6 +20,7 @@ using std::chrono::system_clock;
 using std::tuple;
 using std::vector;
 using std::atomic;
+using std::make_tuple;
 using std::get;
 using std::move;
 using std::abs;
@@ -201,7 +202,7 @@ inline V pagerankTeleportOmp(const H& xt, const vector<V>& r, V P) {
  * @returns change between previous and current rank value
  */
 template <class H, class K, class V>
-inline V pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
+inline tuple<V, V> pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K v, V C0, V P) {
   V av = C0;
   V rv = r[v];
   xt.forEachEdgeKey(v, [&](auto u) {
@@ -209,7 +210,8 @@ inline V pagerankCalculateRank(vector<V>& a, const H& xt, const vector<V>& r, K 
     av += P * r[u]/d;
   });
   a[v] = av;
-  return abs(av - rv);
+  V ev = abs(av - rv);
+  return make_tuple(ev, ev/(rv+av));
 }
 
 
@@ -232,8 +234,8 @@ inline void pagerankCalculateRanks(vector<V>& a, const H& xt, const vector<V>& r
   size_t S = xt.span();
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
-    V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    fr(v, ev);
+    auto [ev, pv] = pagerankCalculateRank(a, xt, r, v, C0, P);
+    fr(v, ev, pv);
     fv(thread, v);
   }
 }
@@ -248,8 +250,8 @@ inline void pagerankCalculateRanksOmp(vector<V>& a, const H& xt, const vector<V>
   for (K v=0; v<S; ++v) {
     if (!xt.hasVertex(v) || !fa(v)) continue;
     int  t = omp_get_thread_num();
-    V   ev = pagerankCalculateRank(a, xt, r, v, C0, P);
-    fr(v, ev);
+    auto [ev, pv] = pagerankCalculateRank(a, xt, r, v, C0, P);
+    fr(v, ev, pv);
     fv(threads[t], v);
   }
 }
