@@ -5,7 +5,7 @@ const path = require('path');
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/m;
 const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\}/m;
-const RRESLT = /^\{\-(.+?)\/\+(.+?) batchf, (.+?)\/(.+?) threads (.+?)ms @ (.+?) (\w+) failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) crashed\] (\w+)/m;
+const RRESLT = /^\{\-(.+?)\/\+(.+?) batchf, (.+?)\/(.+?) threads (.+?)ms @ (.+?) (\w+) failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) crashed\] (\w+)(?:<(\w+),(\w+),(\w+)>)?/m;
 
 
 
@@ -64,6 +64,7 @@ function readLogLine(ln, data, state) {
       batch_deletions_fraction, batch_insertions_fraction,
       failure_threads, max_threads, failure_duration, failure_probability, failure_type,
       corrected_time, time, iterations, error, crashed_count, technique,
+      tolerance_fraction, tolerance_mode, check_and_mark,
     ] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
       batch_deletions_fraction:  parseFloat(batch_deletions_fraction),
@@ -73,12 +74,15 @@ function readLogLine(ln, data, state) {
       failure_duration:      parseFloat(failure_duration),
       failure_probability:   parseFloat(failure_probability),
       failure_type,
-      corrected_time:    parseFloat(corrected_time),
-      time:              parseFloat(time),
-      iterations:        parseFloat(iterations),
-      error:             parseFloat(error),
-      crashed_count:     parseFloat(crashed_count),
+      corrected_time:     parseFloat(corrected_time),
+      time:               parseFloat(time),
+      iterations:         parseFloat(iterations),
+      error:              parseFloat(error),
+      crashed_count:      parseFloat(crashed_count),
       technique,
+      tolerance_fraction: parseFloat(tolerance_fraction || '0'),
+      tolerance_mode:     parseFloat(tolerance_mode || '0'),
+      check_and_mark:     check_and_mark || 'false',
     }));
   }
   return state;
