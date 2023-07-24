@@ -190,7 +190,7 @@ void runExperiment(const G& x, const H& xt) {
   auto fnop = [&](ThreadInfo *thread, auto v) {};
   auto r0   = pagerankBasicOmp(xt, init, {1, LI_NORM, 1e-100}, fnop);
   // Get ranks of vertices on updated graph (dynamic).
-  runBatches(x, rnd, [&](const auto& y, const auto& yt, auto delf, const auto& deletions, auto insf, const auto& insertions) {
+  runBatches(x, rnd, [&](const auto& y, const auto& yt, double delf, const auto& deletions, double insf, const auto& insertions) {
     runThreads([&](int numThreads) {
       runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
         // Follow a specific result logging format, which can be easily parsed later.
