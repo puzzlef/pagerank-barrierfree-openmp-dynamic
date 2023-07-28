@@ -194,7 +194,7 @@ void runExperiment(const G& x, const H& xt) {
     runThreads([&](int numThreads) {
       runFailures(y, [&](int failureDuration, double failureProbability, int failureThreads, auto fv) {
         // Follow a specific result logging format, which can be easily parsed later.
-        auto flog  = [&](const auto& ans, const auto& ref, const char *technique) {
+        auto flog  = [&](const auto& ans, const auto& ref, const char *technique, int failureThreads=0) {
           auto err = liNormOmp(ans.ranks, ref.ranks);
           printf(
             "{-%.3e/+%.3e batchf, %03d/%03d threads %04dms @ %.2e %s failure} -> "
@@ -206,23 +206,27 @@ void runExperiment(const G& x, const H& xt) {
         };
         auto s0 = pagerankBasicOmp(yt, init, {1, LI_NORM, 1e-100}, fnop);
         // Find multi-threaded OpenMP-based Static PageRank (synchronous, no dead ends).
-        auto a0 = pagerankBasicOmp(yt, init, {repeat}, fv);
-        flog(a0, s0, "pagerankBasicOmp");
+        // auto a0 = pagerankBasicOmp(yt, init, {repeat}, fv);
+        // flog(a0, s0, "pagerankBasicOmp");
         // Find multi-threaded OpenMP-based Naive-dynamic PageRank (synchronous, no dead ends).
-        auto a1 = pagerankBasicOmp(yt, &r0.ranks, {repeat}, fv);
-        flog(a1, s0, "pagerankBasicNaiveDynamicOmp");
+        // auto a1 = pagerankBasicOmp(yt, &r0.ranks, {repeat}, fv);
+        // flog(a1, s0, "pagerankBasicNaiveDynamicOmp");
         // Find multi-threaded OpenMP-based Frontier-based Dynamic PageRank (synchronous, no dead ends).
-        auto a2 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &r0.ranks, {repeat}, fv);
-        flog(a2, s0, "pagerankBasicDynamicFrontierOmp");
+        // auto a2 = pagerankBasicDynamicFrontierOmp(x, xt, y, yt, deletions, insertions, &r0.ranks, {repeat}, fv);
+        // flog(a2, s0, "pagerankBasicDynamicFrontierOmp");
         // Find multi-threaded OpenMP-based Static Barrier-free PageRank (asynchronous, no dead ends).
-        auto b0 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
-        flog(b0, s0, "pagerankBarrierfreeOmp");
+        // auto b0 = pagerankBarrierfreeOmp<true>(yt, init, {repeat}, fv);
+        // flog(b0, s0, "pagerankBarrierfreeOmp");
         // Find multi-threaded OpenMP-based Naive-dynamic Barrier-free PageRank (asynchronous, no dead ends).
-        auto b1 = pagerankBarrierfreeOmp<true>(yt, &r0.ranks, {repeat}, fv);
-        flog(b1, s0, "pagerankBarrierfreeNaiveDynamicOmp");
+        // auto b1 = pagerankBarrierfreeOmp<true>(yt, &r0.ranks, {repeat}, fv);
+        // flog(b1, s0, "pagerankBarrierfreeNaiveDynamicOmp");
         // Find multi-threaded OpenMP-based Frontier-based Dynamic Barrier-free PageRank (asynchronous, no dead ends).
+        if (failureThreads==1) {
+          auto b2 = pagerankBarrierfreeDynamicFrontierOmp<true>(x, xt, y, yt, deletions, insertions, &r0.ranks, {repeat}, fnop);
+          flog(b2, s0, "pagerankBarrierfreeDynamicFrontierOmp");
+        }
         auto b2 = pagerankBarrierfreeDynamicFrontierOmp<true>(x, xt, y, yt, deletions, insertions, &r0.ranks, {repeat}, fv);
-        flog(b2, s0, "pagerankBarrierfreeDynamicFrontierOmp");
+        flog(b2, s0, "pagerankBarrierfreeDynamicFrontierOmp", failureThreads);
       });
     });
   });

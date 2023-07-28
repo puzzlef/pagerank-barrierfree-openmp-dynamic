@@ -12,7 +12,7 @@ fi
 export DOWNLOAD="0"
 
 # 1. Static vs Dynamic Barrier-free PageRank
-export MAX_THREADS="32"
+export MAX_THREADS="64"
 if [[ "$1" == "" || "$1" == "1" ]]; then
   ./"$src/main.sh"
 fi
@@ -52,8 +52,9 @@ export FAILURE_DURATION_BEGIN="100"
 export FAILURE_DURATION_END="100"
 export FAILURE_PROBABILITY_BEGIN="0.000001"
 export FAILURE_PROBABILITY_END="0.000001"
-export FAILURE_THREADS_BEGIN="0"
-export FAILURE_THREADS_END="$MAX_THREADS"
+export FAILURE_THREADS_BEGIN="1"
+export FAILURE_THREADS_END="32"
+export FAILURE_THREADS_STEP="*=2"
 
 # 5. With non-uniform sleep failure
 export FAILURE_TYPE="sleep"
