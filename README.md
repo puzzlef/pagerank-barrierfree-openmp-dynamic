@@ -64,13 +64,13 @@ of **equivalent quality** as *With-barrier* (slightly better in case of
 
 > See
 > [code](https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/input-large),
-> [output](https://gist.github.com/wolfram77/a3324d74d3e1b11196066363f170b576), or
+> [output](https://gist.github.com/wolfram77/d78d33aa13b77156eea7c4c2bc2960e9), or
 > [sheets][sheets-e1].
 
-[![](https://i.imgur.com/Wz3bOku.png)][sheets-e1]
-[![](https://i.imgur.com/5229ka1.png)][sheets-e1]
+[![](https://i.imgur.com/VHol26s.png)][sheets-e1]
+[![](https://i.imgur.com/2vByekl.png)][sheets-e1]
 
-[sheets-e1]: https://docs.google.com/spreadsheets/d/1Grse9h_nl1GddoiWnzesy0kDBBGlqbg4wcYH6phpJY0/edit?usp=sharing
+[sheets-e1]: https://docs.google.com/spreadsheets/d/1Gjzv9drtd_zqOYYD_PqvSde_mcmQcnAf_CFg3FHbNwY/edit?usp=sharing
 
 <br>
 
@@ -95,13 +95,13 @@ of **equivalent quality** (slightly better) as *With-barrier*.
 
 > See
 > [code](https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/input-large),
-> [output](https://gist.github.com/wolfram77/15ee23faf1724221b2da4115d49876bd), or
+> [output](https://gist.github.com/wolfram77/46d76338b3fca8f7661fcc7044eb8f20), or
 > [sheets][sheets-e2].
 
-[![](https://i.imgur.com/IhxArYo.png)][sheets-e2]
-[![](https://i.imgur.com/ai4YnPA.png)][sheets-e2]
+[![](https://i.imgur.com/HyTeNWf.png)][sheets-e2]
+[![](https://i.imgur.com/SkWUpdE.png)][sheets-e2]
 
-[sheets-e2]: https://docs.google.com/spreadsheets/d/1v1tKa1jtWQTUt1zFyonBlZR2Ul4mQx_isc3NMhdQol4/edit?usp=sharing
+[sheets-e2]: https://docs.google.com/spreadsheets/d/1YtzLia-sNlK9mJCtAnIHV5yG_sV1zSZUUloqQaHa9YQ/edit?usp=sharing
 [jvm-gc-pause]: https://dzone.com/articles/how-to-reduce-long-gc-pause
 
 <br>
@@ -112,9 +112,9 @@ of **equivalent quality** (slightly better) as *With-barrier*.
 In this experiment, we test **Dynamic Frontier based Barrier-free PageRank** in
 the presence of *random thread crash* on a batch size of `10^-4 |E|`. During
 rank computation of each vertex, **a thread may randomly crash** (*crash-stop*
-*model*) with a **high probability** of `10^-6`. On a graph with 10 million
-vertices, this amounts to an average of `10` threads crashing per iteration. We
-*limit* the number of *threads that may crash* from `0` to `32` threads. Batch
+*model*) with a **high probability** of `10^-5`. On a graph with 10 million
+vertices, this amounts to an average of `100` threads crashing per iteration. We
+*limit* the number of *threads that may crash* from `0` to `56` threads. Batch
 updates are generated as above. Note that *With-barrier PageRank cannot tolerate*
 *thread crashes*.
 
@@ -128,13 +128,38 @@ enviroments.
 
 > See
 > [code](https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/input-large),
-> [output](https://gist.github.com/wolfram77/cafe0ce30ccea3d4dc1491d0e78bf443), or
+> [output](https://gist.github.com/wolfram77/ca5fc1fb63ddeea4664186c0e89b4dc5), or
 > [sheets][sheets-e3].
 
-[![](https://i.imgur.com/YnNWrN2.png)][sheets-e3]
-[![](https://i.imgur.com/evdPenX.png)][sheets-e3]
+[![](https://i.imgur.com/ViqaUju.png)][sheets-e3]
+[![](https://i.imgur.com/mHuwyFI.png)][sheets-e3]
 
-[sheets-e3]: https://docs.google.com/spreadsheets/d/1VzfbtUCGqXRi1y-XFpMjazLw1b1eh4uDZccSDrSHj4A/edit?usp=sharing
+[sheets-e3]: https://docs.google.com/spreadsheets/d/1f2w_uPXbKYyv5Mau_P0zgmv2zvWUXEI7gsT4CjJTa6w/edit?usp=sharing
+
+<br>
+
+
+### Strong scaling (in the absence of faults)
+
+In this experiment, we test the strong-scaling behavior of **Dynamic Frontier**
+**based Barrier-free PageRank** in the absence of faults on a batch size of
+`10^-4 |E|`. We adjust the number of threads from `1` to `64` threads in multiples of `2`. Batch
+updates are generated as above.
+
+Results indicate that **Dynamic Frontier based Barrier-free PageRank** offers a
+speedup of `21.3x` on `64` threads over `1` thread. We observe that the rate of
+increase in speedup drops after `32` threads, which is likely due to the AMD CPU
+being internally partitioned into 4 NUMA nodes.
+
+> See
+> [code](https://github.com/puzzlef/pagerank-barrierfree-openmp-dynamic/tree/input-large),
+> [output](https://gist.github.com/wolfram77/48c714d9fbbd8a85372d2b2e1590dc19), or
+> [sheets][sheets-e3].
+
+[![](https://i.imgur.com/CIncReC.png)][sheets-e3]
+[![](https://i.imgur.com/Npk3Ykp.png)][sheets-e3]
+
+[sheets-e3]: https://docs.google.com/spreadsheets/d/1jhMEvnoHBifuZfRo5Qcy11A-N3xni7h0tVhFJBHNE30/edit?usp=sharing
 
 <br>
 
