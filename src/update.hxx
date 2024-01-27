@@ -13,6 +13,27 @@ using std::vector;
 
 
 
+// ADD VERTICES
+// ------------
+// Add vertices.
+
+template <class G, class K, class V, class FT>
+inline void addVerticesIfU(G& a, K u, K U, V d, FT ft) {
+  if (U<=1) return;
+  a.respan(U);
+  for (; u<U; ++u)
+    if (ft(u, d)) a.addVertex(u, d);
+}
+
+template <class G, class K, class V=typename G::vertex_value_type>
+inline void addVerticesU(G& a, K u, K U, V d=V()) {
+  auto ft = [](auto u, auto d) { return true; };
+  addVerticesIfU(a, u, U, d, ft);
+}
+
+
+
+
 // ADD EDGE
 // --------
 // Add an edge (in parallel).

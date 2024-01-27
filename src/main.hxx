@@ -4,6 +4,7 @@
 #include "_main.hxx"
 #include "Graph.hxx"
 #include "mtx.hxx"
+#include "snap.hxx"
 #include "vertices.hxx"
 #include "edges.hxx"
 #include "csr.hxx"
