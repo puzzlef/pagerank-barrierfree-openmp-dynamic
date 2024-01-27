@@ -3,9 +3,9 @@ const os = require('os');
 const path = require('path');
 
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/m;
-const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
+const RGRAPH = /^Loading graph .*\/(.+?)\.txt \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\}/m;
-const RRESLT = /^\{\-(.+?)\/\+(.+?) batchf, (.+?)\/(.+?) threads (.+?)ms @ (.+?) (\w+) failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) crashed\] (\w+)/m;
+const RRESLT = /^\{\-(.+?)\/\+(.+?) batchf, (.+?) batchi, (.+?)\/(.+?) threads (.+?)ms @ (.+?) (\w+) failure\} -> \{(.+?)\/(.+?)ms, (.+?) iter, (.+?) err, (.+?) crashed\] (\w+)/m;
 
 
 
@@ -61,13 +61,14 @@ function readLogLine(ln, data, state) {
   }
   else if (RRESLT.test(ln)) {
     var [,
-      batch_deletions_fraction, batch_insertions_fraction,
+      batch_deletions_fraction, batch_insertions_fraction, batch_index,
       failure_threads, max_threads, failure_duration, failure_probability, failure_type,
       corrected_time, time, iterations, error, crashed_count, technique,
     ] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
       batch_deletions_fraction:  parseFloat(batch_deletions_fraction),
       batch_insertions_fraction: parseFloat(batch_insertions_fraction),
+      batch_index:               parseFloat(batch_index),
       failure_threads:       parseFloat(failure_threads),
       max_threads:           parseFloat(max_threads),
       failure_duration:      parseFloat(failure_duration),
